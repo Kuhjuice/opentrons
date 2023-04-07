@@ -18,7 +18,6 @@ from opentrons.protocol_engine import (
     Liquid,
 )
 from robot_server.service.json_api import ResourceModel
-from .maintenance_action_models import MaintenanceRunAction
 
 
 # TODO(mc, 2022-02-01): since the `/runs/:run_id/commands` response is now paginated,
@@ -139,3 +138,11 @@ class LabwareDefinitionSummary(BaseModel):
         ...,
         description="The definition's unique resource identifier in the run.",
     )
+
+
+class MaintenanceRunNotFoundError(ValueError):
+    """Error raised when a given Maintenance Run ID is not found in the store."""
+
+    def __init__(self, run_id: str) -> None:
+        """Initialize the error message from the missing ID."""
+        super().__init__(f"Run {run_id} was not found.")

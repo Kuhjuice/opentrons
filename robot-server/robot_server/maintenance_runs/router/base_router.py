@@ -28,7 +28,7 @@ from ...runs.run_models import RunNotFoundError
 from ..maintenance_run_models import (
     MaintenanceRun,
     MaintenanceRunCreate,
-    MaintenanceRunUpdate,
+    MaintenanceRunUpdate, MaintenanceRunNotFoundError,
 )
 from ..engine_store import EngineConflictError
 from ..maintenance_run_data_manager import MaintenanceRunDataManager, RunNotCurrentError
@@ -109,8 +109,9 @@ async def get_run_data_from_url(
         """
         Create a new maintenance run to track robot interaction.
 
-        When too many runs already exist, old ones will be automatically deleted
-        to make room for the new one.
+        Only one maintenance run can exist at a time. 
+        The maintenance run will not be persisted on disk and will need to be deleted 
+        in order to create/ resume a protocol run.
         """
     ),
     status_code=status.HTTP_201_CREATED,
@@ -180,41 +181,41 @@ async def get_run(
     )
 
 
-#
-#
-# @base_router.delete(
-#     path="/runs/{runId}",
-#     summary="Delete a run",
-#     description="Delete a specific run by its unique identifier.",
-#     responses={
-#         status.HTTP_200_OK: {"model": SimpleEmptyBody},
-#         status.HTTP_404_NOT_FOUND: {"model": ErrorBody[RunNotFound]},
-#     },
-# )
-# async def remove_run(
-#     runId: str,
-#     run_data_manager: RunDataManager = Depends(get_run_data_manager),
-# ) -> PydanticResponse[SimpleEmptyBody]:
-#     """Delete a run by its ID.
-#
-#     Arguments:
-#         runId: Run ID pulled from URL.
-#         run_data_manager: Current and historical run data management.
-#     """
-#     try:
-#         await run_data_manager.delete(runId)
-#
-#     except EngineConflictError as e:
-#         raise RunNotIdle().as_error(status.HTTP_409_CONFLICT) from e
-#
-#     except RunNotFoundError as e:
-#         raise RunNotFound(detail=str(e)).as_error(status.HTTP_404_NOT_FOUND) from e
-#
-#     return await PydanticResponse.create(
-#         content=SimpleEmptyBody.construct(),
-#         status_code=status.HTTP_200_OK,
-#     )
-#
+@base_router.delete(
+    path="/runs/{runId}",
+    summary="Delete a maintenance run",
+    description="Delete a specific maintenance run by its unique identifier.",
+    responses={
+        status.HTTP_200_OK: {"model": SimpleEmptyBody},
+        status.HTTP_404_NOT_FOUND: {"model": ErrorBody[RunNotFound]},
+    },
+)
+async def remove_run(
+    runId: str,
+    maintenance_run_data_manager: MaintenanceRunDataManager = Depends(
+        get_maintenance_run_data_manager
+    ),
+) -> PydanticResponse[SimpleEmptyBody]:
+    """Delete a run by its ID.
+
+    Arguments:
+        runId: Run ID pulled from URL.
+        run_data_manager: Current and historical run data management.
+    """
+    try:
+        await maintenance_run_data_manager.delete(runId)
+
+    except EngineConflictError as e:
+        raise RunNotIdle().as_error(status.HTTP_409_CONFLICT) from e
+
+    except MaintenanceRunNotFoundError as e:
+        raise RunNotFound(detail=str(e)).as_error(status.HTTP_404_NOT_FOUND) from e
+
+    return await PydanticResponse.create(
+        content=SimpleEmptyBody.construct(),
+        status_code=status.HTTP_200_OK,
+    )
+
 #
 # @base_router.patch(
 #     path="/runs/{runId}",

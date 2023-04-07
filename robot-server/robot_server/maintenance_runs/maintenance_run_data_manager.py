@@ -11,9 +11,9 @@ from opentrons.protocol_engine import (
     Command,
 )
 
-from .engine_store import EngineStore
+from .engine_store import MaintenanceEngineStore
 from .maintenance_run_models import MaintenanceRun
-from .maintenance_action_models import MaintenanceRunAction
+from ..runs.run_store import CommandNotFoundError
 
 
 def _build_run(
@@ -22,8 +22,7 @@ def _build_run(
     state_summary: Optional[StateSummary],
     current: bool,
 ) -> MaintenanceRun:
-    # TODO(mc, 2022-05-16): improve persistence strategy
-    # such that this default summary object is not needed
+    # TODO(mc, 2022-05-16): do we need this default summary object for maintenance runs?
     state_summary = state_summary or StateSummary.construct(
         status=EngineStatus.STOPPED,
         errors=[],
@@ -64,7 +63,7 @@ class MaintenanceRunDataManager:
         run_store: Persistent database of current and historical run data.
     """
 
-    def __init__(self, engine_store: EngineStore) -> None:
+    def __init__(self, engine_store: MaintenanceEngineStore) -> None:
         self._engine_store = engine_store
 
     @property
@@ -94,15 +93,13 @@ class MaintenanceRunDataManager:
         """
         prev_run_id = self._engine_store.current_run_id
         if prev_run_id is not None:
-            prev_run_result = await self._engine_store.clear()
-            # self._run_store.update_run_state(
-            #     run_id=prev_run_id,
-            #     summary=prev_run_result.state_summary,
-            #     commands=prev_run_result.commands,
-            # )
+            # Allow engine store entry for the previous maintenance run to be cleared
+            # as long as the current maintenance run is inactive. We do not persist
+            # old data so no need to update the previous run' record.
+            await self._engine_store.clear()
 
         state_summary = await self._engine_store.create(
-            run_id=run_id, labware_offsets=labware_offsets, protocol=None
+            run_id=run_id, labware_offsets=labware_offsets,
         )
 
         return _build_run(
@@ -142,21 +139,20 @@ class MaintenanceRunDataManager:
             current=current,
         )
 
-    # async def delete(self, run_id: str) -> None:
-    #     """Delete a current or historical run.
-    #
-    #     Args:
-    #         run_id: The identifier of the run to remove.
-    #
-    #     Raises:
-    #         EngineConflictError: If deleting the current run, the current run
-    #             is not idle and cannot be deleted.
-    #         RunNotFoundError: The given run identifier was not found in the database.
-    #     """
-    #     if run_id == self._engine_store.current_run_id:
-    #         await self._engine_store.clear()
-    #     self._run_store.remove(run_id=run_id)
-    #
+    async def delete(self, run_id: str) -> None:
+        """Delete a current or historical run.
+
+        Args:
+            run_id: The identifier of the run to remove.
+
+        Raises:
+            EngineConflictError: If deleting the current run, the current run
+                is not idle and cannot be deleted.
+            RunNotFoundError: The given run identifier was not found in the database.
+        """
+        if run_id == self._engine_store.current_run_id:
+            await self._engine_store.clear()
+
     # async def update(self, run_id: str, current: Optional[bool]) -> Run:
     #     """Get and potentially archive a run.
     #
@@ -195,61 +191,56 @@ class MaintenanceRunDataManager:
     #         current=next_current,
     #     )
     #
-    # def get_commands_slice(
-    #     self,
-    #     run_id: str,
-    #     cursor: Optional[int],
-    #     length: int,
-    # ) -> CommandSlice:
-    #     """Get a slice of run commands.
-    #
-    #     Args:
-    #         run_id: ID of the run.
-    #         cursor: Requested index of first command in the returned slice.
-    #         length: Length of slice to return.
-    #
-    #     Raises:
-    #         RunNotFoundError: The given run identifier was not found in the database.
-    #     """
-    #     if run_id == self._engine_store.current_run_id:
-    #         the_slice = self._engine_store.engine.state_view.commands.get_slice(
-    #             cursor=cursor, length=length
-    #         )
-    #         return the_slice
-    #
-    #     # Let exception propagate
-    #     return self._run_store.get_commands_slice(
-    #         run_id=run_id, cursor=cursor, length=length
-    #     )
-    #
-    # def get_current_command(self, run_id: str) -> Optional[CurrentCommand]:
-    #     """Get the currently executing command, if any.
-    #
-    #     Args:
-    #         run_id: ID of the run.
-    #     """
-    #     if self._engine_store.current_run_id == run_id:
-    #         return self._engine_store.engine.state_view.commands.get_current()
-    #     return None
-    #
-    # def get_command(self, run_id: str, command_id: str) -> Command:
-    #     """Get a run's command by ID.
-    #
-    #     Args:
-    #         run_id: ID of the run.
-    #         command_id: ID of the command.
-    #
-    #     Raises:
-    #         RunNotFoundError: The given run identifier was not found.
-    #         CommandNotFoundError: The given command identifier was not found.
-    #     """
-    #     if self._engine_store.current_run_id == run_id:
-    #         return self._engine_store.engine.state_view.commands.get(
-    #             command_id=command_id
-    #         )
-    #
-    #     return self._run_store.get_command(run_id=run_id, command_id=command_id)
+    def get_commands_slice(
+        self,
+        run_id: str,
+        cursor: Optional[int],
+        length: int,
+    ) -> CommandSlice:
+        """Get a slice of run commands.
+
+        Args:
+            run_id: ID of the run.
+            cursor: Requested index of first command in the returned slice.
+            length: Length of slice to return.
+
+        Raises:
+            RunNotFoundError: The given run identifier was not found in the database.
+        """
+        if run_id == self._engine_store.current_run_id:
+            the_slice = self._engine_store.engine.state_view.commands.get_slice(
+                cursor=cursor, length=length
+            )
+            return the_slice
+        # TODO (spp): else raise exception?
+
+    def get_current_command(self, run_id: str) -> Optional[CurrentCommand]:
+        """Get the currently executing command, if any.
+
+        Args:
+            run_id: ID of the run.
+        """
+        if self._engine_store.current_run_id == run_id:
+            return self._engine_store.engine.state_view.commands.get_current()
+        return None
+
+    def get_command(self, run_id: str, command_id: str) -> Command:
+        """Get a run's command by ID.
+
+        Args:
+            run_id: ID of the run.
+            command_id: ID of the command.
+
+        Raises:
+            RunNotFoundError: The given run identifier was not found.
+            CommandNotFoundError: The given command identifier was not found.
+        """
+        if self._engine_store.current_run_id == run_id:
+            return self._engine_store.engine.state_view.commands.get(
+                command_id=command_id
+            )
+        raise CommandNotFoundError("No such command found")
+        # TODO (spp): else raise error?
 
     def _get_state_summary(self, run_id: str) -> Optional[StateSummary]:
-
         return self._engine_store.engine.state_view.get_summary()

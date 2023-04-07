@@ -7,7 +7,7 @@ from collections import namedtuple
 
 from opentrons import APIVersion
 from opentrons.hardware_control.emulation.settings import Settings
-from opentrons.protocol_engine.create_protocol_engine import create_protocol_engine
+from opentrons.protocol_engine.protocol_engine_creator import create_protocol_engine
 from opentrons.protocol_engine.state.config import Config
 from opentrons.protocol_reader.protocol_source import (
     JsonProtocolConfig,
