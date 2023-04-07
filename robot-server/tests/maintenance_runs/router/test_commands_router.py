@@ -17,12 +17,11 @@ from robot_server.service.json_api import (
     RequestModel,
     MultiBodyMeta,
 )
-
-from robot_server.runs.run_store import RunStore, CommandNotFoundError
-from robot_server.runs.engine_store import EngineStore
-from robot_server.runs.run_data_manager import RunDataManager
-from robot_server.runs.run_models import RunCommandSummary, RunNotFoundError
-from robot_server.runs.router.commands_router import (
+from robot_server.runs.run_store import CommandNotFoundError
+from robot_server.maintenance_runs.engine_store import MaintenanceEngineStore
+from robot_server.maintenance_runs.maintenance_run_data_manager import MaintenanceRunDataManager
+from robot_server.maintenance_runs.maintenance_run_models import MaintenanceRunCommandSummary, MaintenanceRunNotFoundError
+from robot_server.maintenance_runs.router.commands_router import (
     CommandCollectionLinks,
     CommandLink,
     CommandLinkMeta,
@@ -35,55 +34,45 @@ from robot_server.runs.router.commands_router import (
 
 async def test_get_current_run_engine_from_url(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
-    mock_run_store: RunStore,
+    mock_engine_store: MaintenanceEngineStore,
 ) -> None:
     """Should get an instance of a run protocol engine."""
-    decoy.when(mock_run_store.has("run-id")).then_return(True)
     decoy.when(mock_engine_store.current_run_id).then_return("run-id")
 
     result = await get_current_run_engine_from_url(
         runId="run-id",
         engine_store=mock_engine_store,
-        run_store=mock_run_store,
     )
 
     assert result is mock_engine_store.engine
 
 
-async def test_get_current_run_engine_no_run(
+async def test_get_invalid_run_engine(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
-    mock_run_store: RunStore,
+    mock_engine_store: MaintenanceEngineStore,
 ) -> None:
-    """It should 404 if the run is not in the store."""
-    decoy.when(mock_run_store.has("run-id")).then_return(False)
-
+    """It should 409 if the runID doesn't match current engine store RunID."""
     with pytest.raises(ApiError) as exc_info:
         await get_current_run_engine_from_url(
             runId="run-id",
             engine_store=mock_engine_store,
-            run_store=mock_run_store,
         )
 
-    assert exc_info.value.status_code == 404
+    assert exc_info.value.status_code == 409
     assert exc_info.value.content["errors"][0]["id"] == "RunNotFound"
 
 
 async def test_get_current_run_engine_from_url_not_current(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
-    mock_run_store: RunStore,
+    mock_engine_store: MaintenanceEngineStore,
 ) -> None:
     """It should 409 if you try to add commands to non-current run."""
-    decoy.when(mock_run_store.has("run-id")).then_return(True)
     decoy.when(mock_engine_store.current_run_id).then_return("some-other-run-id")
 
     with pytest.raises(ApiError) as exc_info:
         await get_current_run_engine_from_url(
             runId="run-id",
             engine_store=mock_engine_store,
-            run_store=mock_run_store,
         )
 
     assert exc_info.value.status_code == 409
@@ -242,7 +231,7 @@ async def test_add_command_to_stopped_engine(
 
 
 async def test_get_run_commands(
-    decoy: Decoy, mock_run_data_manager: RunDataManager
+    decoy: Decoy, mock_run_data_manager: MaintenanceRunDataManager
 ) -> None:
     """It should return a list of all commands in a run."""
     command = pe_commands.WaitForResume(
@@ -286,7 +275,7 @@ async def test_get_run_commands(
     )
 
     assert result.content.data == [
-        RunCommandSummary(
+        MaintenanceRunCommandSummary(
             id="command-id",
             key="command-key",
             commandType="waitForResume",
@@ -322,7 +311,7 @@ async def test_get_run_commands(
 
 async def test_get_run_commands_empty(
     decoy: Decoy,
-    mock_run_data_manager: RunDataManager,
+    mock_run_data_manager: MaintenanceRunDataManager,
 ) -> None:
     """It should return an empty commands list if no commands."""
     decoy.when(mock_run_data_manager.get_current_command("run-id")).then_return(None)
@@ -345,10 +334,10 @@ async def test_get_run_commands_empty(
 
 async def test_get_run_commands_not_found(
     decoy: Decoy,
-    mock_run_data_manager: RunDataManager,
+    mock_run_data_manager: MaintenanceRunDataManager,
 ) -> None:
     """It should 404 if the run is not found."""
-    not_found_error = RunNotFoundError("oh no")
+    not_found_error = MaintenanceRunNotFoundError("oh no")
 
     decoy.when(
         mock_run_data_manager.get_commands_slice(run_id="run-id", cursor=21, length=42)
@@ -370,7 +359,7 @@ async def test_get_run_commands_not_found(
 
 
 async def test_get_run_command_by_id(
-    decoy: Decoy, mock_run_data_manager: RunDataManager
+    decoy: Decoy, mock_run_data_manager: MaintenanceRunDataManager
 ) -> None:
     """It should return full details about a command by ID."""
     command = pe_commands.MoveToWell(
@@ -399,12 +388,12 @@ async def test_get_run_command_by_id(
     "exception",
     [
         CommandNotFoundError("oh no"),
-        RunNotFoundError("oh no"),
+        MaintenanceRunNotFoundError("oh no"),
     ],
 )
 async def test_get_run_command_missing(
     decoy: Decoy,
-    mock_run_data_manager: RunDataManager,
+    mock_run_data_manager: MaintenanceRunDataManager,
     exception: Exception,
 ) -> None:
     """It should 404 if you attempt to get a non-existent command."""

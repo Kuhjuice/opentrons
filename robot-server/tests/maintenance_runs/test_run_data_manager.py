@@ -22,12 +22,12 @@ from opentrons.protocol_engine import (
 )
 
 from robot_server.protocols import ProtocolResource
-from robot_server.maintenance_run.engine_store import EngineStore, EngineConflictError
-from robot_server.maintenance_run.maintenance_run_data_manager import (
+from robot_server.maintenance_runs.engine_store import MaintenanceEngineStore, EngineConflictError
+from robot_server.maintenance_runs.maintenance_run_data_manager import (
     MaintenanceRunDataManager,
     RunNotCurrentError,
 )
-from robot_server.maintenance_run.maintenance_run_models import MaintenanceRun
+from robot_server.maintenance_runs.maintenance_run_models import MaintenanceRun
 
 from robot_server.service.task_runner import TaskRunner
 
@@ -35,9 +35,9 @@ from opentrons.protocol_engine import Liquid
 
 
 @pytest.fixture
-def mock_engine_store(decoy: Decoy) -> EngineStore:
+def mock_maintenance_engine_store(decoy: Decoy) -> MaintenanceEngineStore:
     """Get a mock EngineStore."""
-    mock = decoy.mock(cls=EngineStore)
+    mock = decoy.mock(cls=MaintenanceEngineStore)
     decoy.when(mock.current_run_id).then_return(None)
     return mock
 
@@ -70,17 +70,17 @@ def run_command() -> commands.Command:
 
 @pytest.fixture
 def subject(
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
 ) -> MaintenanceRunDataManager:
     """Get a MaintenanceRunDataManager test subject."""
     return MaintenanceRunDataManager(
-        engine_store=mock_engine_store,
+        engine_store=mock_maintenance_engine_store,
     )
 
 
 async def test_create(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
     subject: MaintenanceRunDataManager,
     engine_state_summary: StateSummary,
 ) -> None:
@@ -89,7 +89,7 @@ async def test_create(
     created_at = datetime(year=2021, month=1, day=1)
 
     decoy.when(
-        await mock_engine_store.create(run_id=run_id, labware_offsets=[], protocol=None)
+        await mock_maintenance_engine_store.create(run_id=run_id, labware_offsets=[])
     ).then_return(engine_state_summary)
 
     result = await subject.create(
@@ -114,7 +114,7 @@ async def test_create(
 
 async def test_create_with_options(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
     subject: MaintenanceRunDataManager,
     engine_state_summary: StateSummary,
 ) -> None:
@@ -136,10 +136,9 @@ async def test_create_with_options(
     )
 
     decoy.when(
-        await mock_engine_store.create(
+        await mock_maintenance_engine_store.create(
             run_id=run_id,
             labware_offsets=[labware_offset],
-            protocol=None,
         )
     ).then_return(engine_state_summary)
 
@@ -165,7 +164,7 @@ async def test_create_with_options(
 
 async def test_create_engine_error(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
     subject: MaintenanceRunDataManager,
 ) -> None:
     """It should not create a resource if engine creation fails."""
@@ -173,7 +172,7 @@ async def test_create_engine_error(
     created_at = datetime(year=2021, month=1, day=1)
 
     decoy.when(
-        await mock_engine_store.create(run_id, labware_offsets=[], protocol=None)
+        await mock_maintenance_engine_store.create(run_id, labware_offsets=[])
     ).then_raise(EngineConflictError("oh no"))
 
     with pytest.raises(EngineConflictError):
@@ -186,15 +185,15 @@ async def test_create_engine_error(
 
 async def test_get_current_run(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
     subject: MaintenanceRunDataManager,
     engine_state_summary: StateSummary,
 ) -> None:
     """It should get the current run from the engine."""
     run_id = "hello world"
 
-    decoy.when(mock_engine_store.current_run_id).then_return(run_id)
-    decoy.when(mock_engine_store.engine.state_view.get_summary()).then_return(
+    decoy.when(mock_maintenance_engine_store.current_run_id).then_return(run_id)
+    decoy.when(mock_maintenance_engine_store.engine.state_view.get_summary()).then_return(
         engine_state_summary
     )
 
@@ -217,21 +216,21 @@ async def test_get_current_run(
 
 async def test_get_run_not_current(
     decoy: Decoy,
-    mock_engine_store: EngineStore,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
     subject: MaintenanceRunDataManager,
     engine_state_summary: StateSummary,
 ) -> None:
     """It should raise a RunNotCurrentError."""
     run_id = "hello world"
 
-    decoy.when(mock_engine_store.current_run_id).then_return("not-current-id")
+    decoy.when(mock_maintenance_engine_store.current_run_id).then_return("not-current-id")
     with pytest.raises(RunNotCurrentError):
         subject.get(run_id=run_id)
 
 
 # async def test_get_historical_run(
 #     decoy: Decoy,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 #     engine_state_summary: StateSummary,
@@ -244,7 +243,7 @@ async def test_get_run_not_current(
 #     decoy.when(mock_run_store.get_state_summary(run_id=run_id)).then_return(
 #         engine_state_summary
 #     )
-#     decoy.when(mock_engine_store.current_run_id).then_return("some other id")
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("some other id")
 #
 #     result = subject.get(run_id=run_id)
 #
@@ -266,7 +265,7 @@ async def test_get_run_not_current(
 
 # async def test_get_historical_run_no_data(
 #     decoy: Decoy,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 #     run_resource: RunResource,
@@ -276,7 +275,7 @@ async def test_get_run_not_current(
 #
 #     decoy.when(mock_run_store.get(run_id=run_id)).then_return(run_resource)
 #     decoy.when(mock_run_store.get_state_summary(run_id=run_id)).then_return(None)
-#     decoy.when(mock_engine_store.current_run_id).then_return("some other id")
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("some other id")
 #
 #     result = subject.get(run_id=run_id)
 #
@@ -298,7 +297,7 @@ async def test_get_run_not_current(
 
 # async def test_get_all_runs(
 #     decoy: Decoy,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 # ) -> None:
@@ -337,8 +336,8 @@ async def test_get_run_not_current(
 #         actions=[],
 #     )
 #
-#     decoy.when(mock_engine_store.current_run_id).then_return("current-run")
-#     decoy.when(mock_engine_store.engine.state_view.get_summary()).then_return(
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("current-run")
+#     decoy.when(mock_maintenance_engine_store.engine.state_view.get_summary()).then_return(
 #         current_run_data
 #     )
 #     decoy.when(mock_run_store.get_state_summary("historical-run")).then_return(
@@ -382,37 +381,33 @@ async def test_get_run_not_current(
 #     ]
 
 
-# async def test_delete_current_run(
-#     decoy: Decoy,
-#     mock_engine_store: EngineStore,
-#     mock_run_store: RunStore,
-#     subject: RunDataManager,
-# ) -> None:
-#     """It should delete the current run from the engine."""
-#     run_id = "hello world"
-#     decoy.when(mock_engine_store.current_run_id).then_return(run_id)
-#
-#     await subject.delete(run_id=run_id)
-#
-#     decoy.verify(
-#         await mock_engine_store.clear(),
-#         mock_run_store.remove(run_id=run_id),
-#     )
+async def test_delete_current_run(
+    decoy: Decoy,
+    mock_maintenance_engine_store: MaintenanceEngineStore,
+    subject: MaintenanceRunDataManager,
+) -> None:
+    """It should delete the current run from the engine."""
+    run_id = "hello world"
+    decoy.when(mock_maintenance_engine_store.current_run_id).then_return(run_id)
+
+    await subject.delete(run_id=run_id)
+
+    decoy.verify(await mock_maintenance_engine_store.clear())
 
 
 # async def test_delete_historical_run(
 #     decoy: Decoy,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 # ) -> None:
 #     """It should delete a historical run from the store."""
 #     run_id = "hello world"
-#     decoy.when(mock_engine_store.current_run_id).then_return("some other id")
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("some other id")
 #
 #     await subject.delete(run_id=run_id)
 #
-#     decoy.verify(await mock_engine_store.clear(), times=0)
+#     decoy.verify(await mock_maintenance_engine_store.clear(), times=0)
 #     decoy.verify(mock_run_store.remove(run_id=run_id), times=1)
 
 
@@ -421,14 +416,14 @@ async def test_get_run_not_current(
 #     engine_state_summary: StateSummary,
 #     run_resource: RunResource,
 #     run_command: commands.Command,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 # ) -> None:
 #     """It should persist the current run and clear the engine on current=false."""
 #     run_id = "hello world"
-#     decoy.when(mock_engine_store.current_run_id).then_return(run_id)
-#     decoy.when(await mock_engine_store.clear()).then_return(
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return(run_id)
+#     decoy.when(await mock_maintenance_engine_store.clear()).then_return(
 #         ProtocolRunResult(commands=[run_command], state_summary=engine_state_summary)
 #     )
 #
@@ -464,22 +459,22 @@ async def test_get_run_not_current(
 #     engine_state_summary: StateSummary,
 #     run_resource: RunResource,
 #     run_command: commands.Command,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 #     current: Optional[bool],
 # ) -> None:
 #     """It should noop on current=None and current=True."""
 #     run_id = "hello world"
-#     decoy.when(mock_engine_store.current_run_id).then_return(run_id)
-#     decoy.when(mock_engine_store.engine.state_view.get_summary()).then_return(
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return(run_id)
+#     decoy.when(mock_maintenance_engine_store.engine.state_view.get_summary()).then_return(
 #         engine_state_summary
 #     )
 #     decoy.when(mock_run_store.get(run_id=run_id)).then_return(run_resource)
 #
 #     result = await subject.update(run_id=run_id, current=current)
 #
-#     decoy.verify(await mock_engine_store.clear(), times=0)
+#     decoy.verify(await mock_maintenance_engine_store.clear(), times=0)
 #     decoy.verify(
 #         mock_run_store.update_run_state(
 #             run_id=run_id,
@@ -510,13 +505,13 @@ async def test_get_run_not_current(
 #     engine_state_summary: StateSummary,
 #     run_resource: RunResource,
 #     run_command: commands.Command,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     mock_run_store: RunStore,
 #     subject: RunDataManager,
 # ) -> None:
 #     """It should noop on current=None."""
 #     run_id = "hello world"
-#     decoy.when(mock_engine_store.current_run_id).then_return("some other id")
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("some other id")
 #
 #     with pytest.raises(RunNotCurrentError):
 #         await subject.update(run_id=run_id, current=False)
@@ -525,7 +520,7 @@ async def test_get_run_not_current(
 # def test_get_commands_slice_current_run(
 #     decoy: Decoy,
 #     subject: RunDataManager,
-#     mock_engine_store: EngineStore,
+#     mock_maintenance_engine_store: EngineStore,
 #     run_command: commands.Command,
 # ) -> None:
 #     """Should get a sliced command list from engine store."""
@@ -543,9 +538,9 @@ async def test_get_run_not_current(
 #     expected_command_slice = CommandSlice(
 #         commands=expected_commands_result, cursor=1, total_length=3
 #     )
-#     decoy.when(mock_engine_store.current_run_id).then_return("run-id")
+#     decoy.when(mock_maintenance_engine_store.current_run_id).then_return("run-id")
 #     decoy.when(
-#         mock_engine_store.engine.state_view.commands.get_slice(1, 2)
+#         mock_maintenance_engine_store.engine.state_view.commands.get_slice(1, 2)
 #     ).then_return(expected_command_slice)
 #
 #     result = subject.get_commands_slice("run-id", 1, 2)

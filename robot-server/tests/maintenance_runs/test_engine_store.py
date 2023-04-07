@@ -1,30 +1,42 @@
 """Tests for the EngineStore interface."""
 from datetime import datetime
-from pathlib import Path
-
+import inspect
 import pytest
 from decoy import Decoy, matchers
 
-from opentrons_shared_data import get_shared_data_root
 from opentrons_shared_data.robot.dev_types import RobotType
 
 from opentrons.types import DeckSlotName
 from opentrons.hardware_control import HardwareControlAPI
-from opentrons.protocol_engine import ProtocolEngine, StateSummary, types as pe_types
-from opentrons.protocol_runner import ProtocolRunner, ProtocolRunResult
-from opentrons.protocol_reader import ProtocolReader, ProtocolSource
+from opentrons.protocol_engine import (
+    ProtocolEngine,
+    StateSummary,
+    protocol_engine_creator,
+    types as pe_types,
+    Config as ProtocolEngineConfig,
+)
+from opentrons.protocol_runner import ProtocolRunResult
 
-from robot_server.protocols import ProtocolResource
-from robot_server.maintenance_run.engine_store import EngineStore, EngineConflictError
+from robot_server.maintenance_runs.engine_store import (
+    MaintenanceEngineStore,
+    EngineConflictError,
+)
 
 
 @pytest.fixture
-def subject(decoy: Decoy) -> EngineStore:
-    """Get a EngineStore test subject."""
+def hardware_api(
+    decoy: Decoy,
+) -> HardwareControlAPI:
+    """Return a mock in the shape of a HardwareControlAPI."""
     # TODO(mc, 2021-06-11): to make these test more effective and valuable, we
     # should pass in some sort of actual, valid HardwareAPI instead of a mock
-    hardware_api = decoy.mock(cls=HardwareControlAPI)
-    return EngineStore(
+    return decoy.mock(cls=HardwareControlAPI)
+
+
+@pytest.fixture
+def subject(decoy: Decoy, hardware_api: HardwareControlAPI) -> MaintenanceEngineStore:
+    """Get a EngineStore test subject."""
+    return MaintenanceEngineStore(
         hardware_api=hardware_api,
         # Arbitrary choice of robot_type. Tests where robot_type matters should
         # construct their own EngineStore.
@@ -32,22 +44,12 @@ def subject(decoy: Decoy) -> EngineStore:
     )
 
 
-@pytest.fixture
-async def protocol_source(tmp_path: Path) -> ProtocolSource:
-    """Get a protocol source fixture."""
-    simple_protocol = (
-        get_shared_data_root() / "protocol" / "fixtures" / "6" / "simpleV6.json"
-    )
-    return await ProtocolReader().read_saved(files=[simple_protocol], directory=None)
-
-
-async def test_create_engine(subject: EngineStore) -> None:
+async def test_create_engine(subject: MaintenanceEngineStore) -> None:
     """It should create an engine for a run."""
-    result = await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
+    result = await subject.create(run_id="run-id", labware_offsets=[])
 
     assert subject.current_run_id == "run-id"
     assert isinstance(result, StateSummary)
-    assert isinstance(subject.runner, ProtocolRunner)
     assert isinstance(subject.engine, ProtocolEngine)
 
 
@@ -59,14 +61,14 @@ async def test_create_engine_uses_robot_type(
     # TODO(mc, 2021-06-11): to make these test more effective and valuable, we
     # should pass in some sort of actual, valid HardwareAPI instead of a mock
     hardware_api = decoy.mock(cls=HardwareControlAPI)
-    subject = EngineStore(hardware_api=hardware_api, robot_type=robot_type)
+    subject = MaintenanceEngineStore(hardware_api=hardware_api, robot_type=robot_type)
 
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
+    await subject.create(run_id="run-id", labware_offsets=[])
 
     assert subject.engine.state_view.config.robot_type == robot_type
 
 
-async def test_create_engine_with_labware_offsets(subject: EngineStore) -> None:
+async def test_create_engine_with_labware_offsets(subject: MaintenanceEngineStore) -> None:
     """It should create an engine for a run with labware offsets."""
     labware_offset = pe_types.LabwareOffsetCreate(
         definitionUri="namespace/load_name/version",
@@ -77,7 +79,6 @@ async def test_create_engine_with_labware_offsets(subject: EngineStore) -> None:
     result = await subject.create(
         run_id="run-id",
         labware_offsets=[labware_offset],
-        protocol=None,
     )
 
     assert result.labwareOffsets == [
@@ -91,43 +92,40 @@ async def test_create_engine_with_labware_offsets(subject: EngineStore) -> None:
     ]
 
 
-@pytest.mark.xfail(strict=True, raises=NotImplementedError)
-async def test_create_engine_with_protocol(
-    subject: EngineStore,
-    protocol_source: ProtocolSource,
-) -> None:
-    """It should create an engine for a run with labware offsets."""
-    # TODO(mc, 2022-05-18): https://github.com/Opentrons/opentrons/pull/10170
-    raise NotImplementedError("Implement this test when JSONv6 runs are supported")
-
-    protocol = ProtocolResource(
-        protocol_id="my cool protocol",
-        protocol_key=None,
-        created_at=datetime(year=2021, month=1, day=1),
-        source=protocol_source,
-    )
-
-    await subject.create(
-        run_id="run-id",
-        labware_offsets=[],
-        protocol=protocol,
-    )
-
-
-async def test_archives_state_if_engine_already_exists(subject: EngineStore) -> None:
-    """It should not create more than one engine / runner pair."""
-    await subject.create(run_id="run-id-1", labware_offsets=[], protocol=None)
+async def test_archives_state_if_engine_already_exists(subject: MaintenanceEngineStore) -> None:
+    """It should not create more than one engine."""
+    await subject.create(run_id="run-id-1", labware_offsets=[])
 
     with pytest.raises(EngineConflictError):
-        await subject.create(run_id="run-id-2", labware_offsets=[], protocol=None)
+        await subject.create(run_id="run-id-2", labware_offsets=[])
 
     assert subject.current_run_id == "run-id-1"
 
 
-async def test_clear_engine(subject: EngineStore) -> None:
+async def test_clear_engine(
+        decoy: Decoy,
+        monkeypatch: pytest.MonkeyPatch,
+        hardware_api: HardwareControlAPI,
+) -> None:
     """It should clear a stored engine entry."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-    await subject.runner.run()
+    mock_engine_creator = decoy.mock(func=protocol_engine_creator.create_protocol_engine)
+    monkeypatch.setattr(
+        protocol_engine_creator, "create_protocol_engine", mock_engine_creator)
+    mock_engine = decoy.mock(cls=ProtocolEngine)
+    subject = MaintenanceEngineStore(
+        hardware_api=hardware_api,
+        # Arbitrary choice of robot_type. Tests where robot_type matters should
+        # construct their own EngineStore.
+        robot_type="OT-2 Standard",
+    )
+    decoy.when(await protocol_engine_creator.create_protocol_engine(
+        hardware_api=hardware_api,
+        config=ProtocolEngineConfig(robot_type="OT-2 Standard",
+                                    block_on_door_open=False)
+    )).then_return(mock_engine)
+    decoy.when(mock_engine.state_view.commands.get_is_okay_to_clear()).then_return(
+        True)
+    await subject.create(run_id="run-id", labware_offsets=[])
     result = await subject.clear()
 
     assert subject.current_run_id is None
@@ -136,79 +134,32 @@ async def test_clear_engine(subject: EngineStore) -> None:
     with pytest.raises(AssertionError):
         subject.engine
 
-    with pytest.raises(AssertionError):
-        subject.runner
 
-
-async def test_clear_engine_not_stopped_or_idle(subject: EngineStore) -> None:
+async def test_clear_running_engine(
+        decoy: Decoy,
+        monkeypatch: pytest.MonkeyPatch,
+        hardware_api: HardwareControlAPI,
+        subject: MaintenanceEngineStore,
+) -> None:
     """It should raise a conflict if the engine is not stopped."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-    subject.runner.play()
+    mock_engine_creator = decoy.mock(
+        func=protocol_engine_creator.create_protocol_engine)
+    monkeypatch.setattr(
+        protocol_engine_creator, "create_protocol_engine", mock_engine_creator)
+    mock_engine = decoy.mock(cls=ProtocolEngine)
+    subject = MaintenanceEngineStore(
+        hardware_api=hardware_api,
+        # Arbitrary choice of robot_type. Tests where robot_type matters should
+        # construct their own EngineStore.
+        robot_type="OT-2 Standard",
+    )
+    decoy.when(await protocol_engine_creator.create_protocol_engine(
+        hardware_api=hardware_api,
+        config=ProtocolEngineConfig(robot_type="OT-2 Standard",
+                                    block_on_door_open=False)
+    )).then_return(mock_engine)
+    decoy.when(mock_engine.state_view.commands.get_is_okay_to_clear()).then_return(False)
+    await subject.create(run_id="run-id", labware_offsets=[])
 
     with pytest.raises(EngineConflictError):
         await subject.clear()
-
-
-async def test_clear_idle_engine(subject: EngineStore) -> None:
-    """It should successfully clear engine if idle (not started)."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-    assert subject.engine is not None
-    assert subject.runner is not None
-
-    await subject.clear()
-
-    # TODO: test engine finish is called
-    with pytest.raises(AssertionError):
-        subject.engine
-    with pytest.raises(AssertionError):
-        subject.runner
-
-
-async def test_get_default_engine_idempotent(subject: EngineStore) -> None:
-    """It should create and retrieve the same default ProtocolEngine."""
-    result = await subject.get_default_engine()
-    repeated_result = await subject.get_default_engine()
-
-    assert isinstance(result, ProtocolEngine)
-    assert repeated_result is result
-
-
-@pytest.mark.parametrize("robot_type", ["OT-2 Standard", "OT-3 Standard"])
-async def test_get_default_engine_robot_type(
-    decoy: Decoy, robot_type: RobotType
-) -> None:
-    """It should create default ProtocolEngines with the given robot type."""
-    # TODO(mc, 2021-06-11): to make these test more effective and valuable, we
-    # should pass in some sort of actual, valid HardwareAPI instead of a mock
-    hardware_api = decoy.mock(cls=HardwareControlAPI)
-    subject = EngineStore(hardware_api=hardware_api, robot_type=robot_type)
-
-    result = await subject.get_default_engine()
-
-    assert result.state_view.config.robot_type == robot_type
-
-
-async def test_get_default_engine_current_unstarted(subject: EngineStore) -> None:
-    """It should allow a default engine if another engine current but unstarted."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-
-    result = await subject.get_default_engine()
-    assert isinstance(result, ProtocolEngine)
-
-
-async def test_get_default_engine_conflict(subject: EngineStore) -> None:
-    """It should not allow a default engine if another engine is executing commands."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-    subject.engine.play()
-
-    with pytest.raises(EngineConflictError):
-        await subject.get_default_engine()
-
-
-async def test_get_default_engine_run_stopped(subject: EngineStore) -> None:
-    """It allow a default engine if another engine is terminal."""
-    await subject.create(run_id="run-id", labware_offsets=[], protocol=None)
-    await subject.engine.finish()
-
-    result = await subject.get_default_engine()
-    assert isinstance(result, ProtocolEngine)
