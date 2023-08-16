@@ -497,10 +497,6 @@ class API(
         :py:meth:`stop`.
         """
         await self._backend.hard_halt()
-        self._log.info("Stopping modules")
-        future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
-        future.result(timeout=60)
-        self._log.info("Stopped or timed out")
 
     async def stop(self, home_after: bool = True) -> None:
         """
@@ -511,6 +507,11 @@ class API(
         robot. After this call, no further recovery is necessary.
         """
         await self._backend.halt()
+        self._log.info("Stopping modules")
+        future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(),
+                                                  self._loop)
+        future.result(timeout=60)
+        self._log.info("Stopped or timed out")
         self._log.info("Recovering from halt")
         await self.reset()
         await self.cache_instruments()
