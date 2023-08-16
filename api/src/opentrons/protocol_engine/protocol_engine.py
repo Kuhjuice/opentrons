@@ -292,7 +292,7 @@ class ProtocolEngine:
         action = self._state_store.commands.validate_action_allowed(StopAction())
         self._action_dispatcher.dispatch(action)
         self._queue_worker.cancel()
-        await self._hardware_stopper.do_halt()
+        # await self._hardware_stopper.do_halt()
 
     async def wait_until_complete(self) -> None:
         """Wait until there are no more commands to execute.
@@ -326,6 +326,7 @@ class ProtocolEngine:
             set_run_status: Whether to calculate a `success` or `failure` run status.
                 If `False`, will set status to `stopped`.
         """
+        _log.info("*** PE: Engine finish called ***")
         if self._state_store.commands.state.stopped_by_estop:
             drop_tips_and_home = False
             if error is None:

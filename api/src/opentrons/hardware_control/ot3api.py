@@ -737,23 +737,35 @@ class OT3API(
 
     async def stop_motors(self) -> None:
         """Immediately stop motors."""
+        self._log.info("Stopping motors")
         await self._backend.halt()
+        self._log.info("Stopped")
 
     def stop_modules(self) -> None:
         """Immediately stop modules."""
-        asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
+        self._log.info("Stopping modules")
+        future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
+        future.result(timeout=120)
+        self._log.info("Stopped or timed out")
 
     async def halt(self) -> None:
         """Immediately disengage all present motors and clear motor and module tasks."""
+        self._log.info("OT3API: halt called")
+
         await self.disengage_axes(
             [ax for ax in Axis if self._backend.axis_is_present(ax)]
         )
         await self.stop_motors()
         self.stop_modules()
+        self._log.info("OT3API: halt DONE")
 
     async def stop(self, home_after: bool = True) -> None:
         """Stop motion as soon as possible, reset, and optionally home."""
+        await self.disengage_axes(
+            [ax for ax in Axis if self._backend.axis_is_present(ax)]
+        )
         await self.stop_motors()
+        self.stop_modules()
         self._log.info("Recovering from halt")
         await self.reset()
 
@@ -1354,7 +1366,9 @@ class OT3API(
         return self.get_engaged_axes()
 
     async def disengage_axes(self, which: List[Axis]) -> None:
+        self._log.info("Disengaging axes")
         await self._backend.disengage_axes(which)
+        self._log.info("Disengaged")
 
     async def engage_axes(self, which: List[Axis]) -> None:
         await self._backend.engage_axes(which)

@@ -61,6 +61,7 @@ class QueueWorker:
             try:
                 await worker_task
             except asyncio.CancelledError:  # From self.cancel().
+                log.info("Queue worker .join got a CancelledError")
                 pass
             except Exception as e:
                 log.error("Unhandled exception in QueueWorker job", exc_info=e)
@@ -75,6 +76,7 @@ class QueueWorker:
             except RunStoppedError:
                 # There are no more commands that we should execute, either because the run has
                 # completed on its own, or because a client requested it to stop.
+                log.info("queue_worker._run_commands exiting due to RunStoppedError!")
                 break
             else:
                 await self._command_executor.execute(command_id=command_id)

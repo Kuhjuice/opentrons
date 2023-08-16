@@ -497,7 +497,10 @@ class API(
         :py:meth:`stop`.
         """
         await self._backend.hard_halt()
-        asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
+        self._log.info("Stopping modules")
+        future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
+        future.result(timeout=60)
+        self._log.info("Stopped or timed out")
 
     async def stop(self, home_after: bool = True) -> None:
         """

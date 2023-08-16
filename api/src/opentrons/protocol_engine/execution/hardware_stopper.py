@@ -50,6 +50,7 @@ class HardwareStopper:
 
     async def _drop_tip(self) -> None:
         """Drop currently attached tip, if any, into trash after a run cancel."""
+        log.info("PE: _drop_tip called")
         attached_tips = self._state_store.pipettes.get_all_attached_tips()
 
         if attached_tips:
@@ -87,17 +88,25 @@ class HardwareStopper:
                 # should not happen during an actual run
                 log.debug(f"Pipette ID {pipette_id} no longer attached.")
 
+        log.info("PE: _drop_tip DONE")
+
     async def do_halt(self) -> None:
         """Issue a halt signal to the hardware API.
 
         After issuing a halt, you must call do_stop_and_recover after
         anything using the HardwareAPI has settled.
         """
+        log.info("PE: do_halt called")
         await self._hardware_api.halt()
+        log.info("PE: do_halt DONE")
 
     async def do_stop_and_recover(self, drop_tips_and_home: bool = False) -> None:
         """Stop and reset the HardwareAPI, optionally dropping tips and homing."""
+        log.info("PE: do_stop_and_recover called")
         if drop_tips_and_home:
             await self._drop_tip()
 
+        log.info("PE: calling hardware stop..")
         await self._hardware_api.stop(home_after=drop_tips_and_home)
+        log.info("PE: hardware stop DONE")
+        log.info("PE: do_stop_and_recover DONE")

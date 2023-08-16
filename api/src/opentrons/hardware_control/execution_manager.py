@@ -1,11 +1,13 @@
 import asyncio
 import functools
+import logging
 from typing import Set, TypeVar, Type, cast, Callable, Any, Awaitable, overload
 from .types import ExecutionState
 from .errors import ExecutionCancelledError
 
 TaskContents = TypeVar("TaskContents")
 
+_log = logging.getLogger(__name__)
 
 class ExecutionManager:
     """This class holds onto a flag that is up/set while the hardware
@@ -40,17 +42,23 @@ class ExecutionManager:
 
     async def cancel(self) -> None:
         async with self._condition:
+            _log.info("****** Execution manager: setting state to CANCELLED")
             self._state = ExecutionState.CANCELLED
             self._condition.notify_all()
+            _log.info("***** Execution manager: notified all of condition availability")
             running_task = asyncio.current_task()
             for t in self._cancellable_tasks:
+                _log.info(f"***** Cancelling task {t} in {self._cancellable_tasks}")
                 if t is not running_task:
                     t.cancel()
+            _log.info("******* _execution_manager.cancel")
 
     async def reset(self) -> None:
         async with self._condition:
+            print("Execution manager: resetting state to RUNNING")
             self._state = ExecutionState.RUNNING
             self._condition.notify_all()
+        _log.info("_execution_manager.reset")
 
     async def get_state(self) -> ExecutionState:
         async with self._condition:
