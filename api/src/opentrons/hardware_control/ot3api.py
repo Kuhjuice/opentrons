@@ -741,12 +741,13 @@ class OT3API(
         await self._backend.halt()
         self._log.info("Stopped")
 
-    def stop_modules(self) -> None:
+    async def stop_modules(self) -> None:
         """Immediately stop modules."""
-        self._log.info("Stopping modules")
-        future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
-        future.result(timeout=120)
-        self._log.info("Stopped or timed out")
+        self._log.info("Stopping modules. Awaiting on execution_manager.cancel.")
+        await self._execution_manager.cancel()
+        # future = asyncio.run_coroutine_threadsafe(self._execution_manager.cancel(), self._loop)
+        # future.result(timeout=30)
+        self._log.info("Done awaiting")
 
     async def halt(self) -> None:
         """Immediately disengage all present motors and clear motor and module tasks."""
@@ -756,16 +757,20 @@ class OT3API(
             [ax for ax in Axis if self._backend.axis_is_present(ax)]
         )
         await self.stop_motors()
-        self.stop_modules()
+        await self.stop_modules()
         self._log.info("OT3API: halt DONE")
 
     async def stop(self, home_after: bool = True) -> None:
         """Stop motion as soon as possible, reset, and optionally home."""
+        self._log.info("OT3API: stop called")
         await self.disengage_axes(
             [ax for ax in Axis if self._backend.axis_is_present(ax)]
         )
         await self.stop_motors()
-        self.stop_modules()
+        await self.stop_modules()
+        # self._log.info("Sleeping for 15 seconds")
+        # await asyncio.sleep(15)
+        # self._log.info("Done sleeping")
         self._log.info("Recovering from halt")
         await self.reset()
 

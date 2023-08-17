@@ -27,10 +27,13 @@ class ExecutionManager:
 
     async def pause(self) -> None:
         async with self._condition:
+            _log.info("**** execution manager: Pause called")
             if self._state is ExecutionState.CANCELLED:
+                _log.info("**** execution manager: Pause called while execution is cancelled")
                 raise ExecutionCancelledError
             else:
                 self._state = ExecutionState.PAUSED
+                # TODO (spp): Do we need to notify all here??
 
     async def resume(self) -> None:
         async with self._condition:
@@ -41,6 +44,7 @@ class ExecutionManager:
                 self._condition.notify_all()
 
     async def cancel(self) -> None:
+        _log.info("****** Execution manager: Waiting for condition in cancel")
         async with self._condition:
             _log.info("****** Execution manager: setting state to CANCELLED")
             self._state = ExecutionState.CANCELLED
@@ -71,10 +75,13 @@ class ExecutionManager:
     async def wait_for_is_running(self) -> None:
         async with self._condition:
             if self._state == ExecutionState.PAUSED:
+                _log.info("**** State is PAUSED. _condition is waiting here")
                 await self._condition.wait()
                 if self._state == ExecutionState.CANCELLED:
+                    _log.info("**** State was paused but now it has transitioned to CANCELLED!")
                     raise ExecutionCancelledError
             elif self._state == ExecutionState.CANCELLED:
+                _log.info("**** State is CANCELLED!")
                 raise ExecutionCancelledError
             else:
                 pass
