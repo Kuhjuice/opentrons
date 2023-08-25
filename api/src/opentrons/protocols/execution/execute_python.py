@@ -63,7 +63,7 @@ def run_python(proto: PythonProtocol, context: ProtocolContext):
         SmoothieAlarm,
         asyncio.CancelledError,
         ExecutionCancelledError,
-        ProtocolCommandFailedError,
+        # ProtocolCommandFailedError,
     ):
         # this is a protocol cancel and shouldn't have special logging
         raise

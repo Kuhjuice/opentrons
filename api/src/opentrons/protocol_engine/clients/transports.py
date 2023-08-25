@@ -7,7 +7,7 @@ from opentrons_shared_data.labware.dev_types import LabwareUri
 from opentrons_shared_data.labware.labware_definition import LabwareDefinition
 
 from ..protocol_engine import ProtocolEngine
-from ..errors import ProtocolCommandFailedError
+from ..errors import ProtocolCommandFailedError, RunStoppedError
 from ..state import StateView
 from ..commands import CommandCreate, CommandResult
 
@@ -59,6 +59,8 @@ class ChildThreadTransport:
         # TODO: this needs to have an actual code
         if command.error is not None:
             error = command.error
+            # if isinstance(error, RunStoppedError):
+            #     raise error
             raise ProtocolCommandFailedError(
                 original_error=error,
                 message=f"{error.errorType}: {error.detail}",
