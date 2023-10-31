@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, cast
 
+from opentrons import APIVersion
+from opentrons.hardware_control.instruments.nozzle_manager import \
+    NozzleConfigurationType
 from opentrons.types import Location, Mount
 from opentrons.hardware_control import SyncHardwareAPI
 from opentrons.hardware_control.dev_types import PipetteDict
@@ -33,6 +36,7 @@ from opentrons.protocol_api._nozzle_layout import NozzleLayout
 
 from ..instrument import AbstractInstrument
 from .well import WellCore
+from . import deck_conflict
 
 if TYPE_CHECKING:
     from .protocol import ProtocolCore
@@ -110,6 +114,7 @@ class InstrumentCore(AbstractInstrument[WellCore]):
             in_place: whether this is a in-place command.
         """
         if well_core is None:
+            # TODO: log warning here that deck conflicts cannot be checked for partial tip config
             if not in_place:
                 self._engine_client.move_to_coordinates(
                     pipette_id=self._pipette_id,
@@ -136,7 +141,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
                     absolute_point=location.point,
                 )
             )
-
+            deck_conflict.check_safe_for_pipette_movement(
+                engine_state=self._engine_client.state,
+                pipette_id=self._pipette_id,
+                labware_id=labware_id,
+                well_name=well_name,
+                well_location=well_location,
+            )
             self._engine_client.aspirate(
                 pipette_id=self._pipette_id,
                 labware_id=labware_id,
@@ -197,7 +208,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
                     absolute_point=location.point,
                 )
             )
-
+            deck_conflict.check_safe_for_pipette_movement(
+                engine_state=self._engine_client.state,
+                pipette_id=self._pipette_id,
+                labware_id=labware_id,
+                well_name=well_name,
+                well_location=well_location,
+            )
             self._engine_client.dispense(
                 pipette_id=self._pipette_id,
                 labware_id=labware_id,
@@ -247,7 +264,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
                     absolute_point=location.point,
                 )
             )
-
+            deck_conflict.check_safe_for_pipette_movement(
+                engine_state=self._engine_client.state,
+                pipette_id=self._pipette_id,
+                labware_id=labware_id,
+                well_name=well_name,
+                well_location=well_location,
+            )
             self._engine_client.blow_out(
                 pipette_id=self._pipette_id,
                 labware_id=labware_id,
@@ -284,7 +307,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
         well_location = WellLocation(
             origin=WellOrigin.TOP, offset=WellOffset(x=0, y=0, z=z_offset)
         )
-
+        deck_conflict.check_safe_for_pipette_movement(
+            engine_state=self._engine_client.state,
+            pipette_id=self._pipette_id,
+            labware_id=labware_id,
+            well_name=well_name,
+            well_location=well_location,
+        )
         self._engine_client.touch_tip(
             pipette_id=self._pipette_id,
             labware_id=labware_id,
@@ -326,7 +355,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
             well_name=well_name,
             absolute_point=location.point,
         )
-
+        deck_conflict.check_safe_for_pipette_movement(
+            engine_state=self._engine_client.state,
+            pipette_id=self._pipette_id,
+            labware_id=labware_id,
+            well_name=well_name,
+            well_location=well_location,
+        )
         self._engine_client.pick_up_tip(
             pipette_id=self._pipette_id,
             labware_id=labware_id,
@@ -372,6 +407,13 @@ class InstrumentCore(AbstractInstrument[WellCore]):
         else:
             well_location = DropTipWellLocation()
 
+        deck_conflict.check_safe_for_pipette_movement(
+            engine_state=self._engine_client.state,
+            pipette_id=self._pipette_id,
+            labware_id=labware_id,
+            well_name=well_name,
+            well_location=well_location,
+        )
         self._engine_client.drop_tip(
             pipette_id=self._pipette_id,
             labware_id=labware_id,
@@ -449,6 +491,7 @@ class InstrumentCore(AbstractInstrument[WellCore]):
         Will match the load name of the actually loaded pipette,
         which may differ from the requested load name.
         """
+        # TODO (spp): make this return the API-compatible names of the Flex pipettes
         # TODO (tz, 11-23-22): revert this change when merging
         # https://opentrons.atlassian.net/browse/RLIQ-251
         pipette = self._engine_client.state.pipettes.get(self._pipette_id)

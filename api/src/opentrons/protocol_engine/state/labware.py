@@ -276,10 +276,8 @@ class LabwareView(HasState[LabwareState]):
                 )
 
     # TODO(mc, 2022-12-09): enforce data integrity (e.g. one labware per slot)
-    # rather than shunting this work to callers via `allowed_ids`.
-    # This has larger implications and is tied up in splitting LPC out of the protocol run
     def get_by_slot(
-        self, slot_name: DeckSlotName, allowed_ids: Set[str]
+        self, slot_name: DeckSlotName,
     ) -> Optional[LoadedLabware]:
         """Get the labware located in a given slot, if any."""
         loaded_labware = reversed(list(self._state.labware_by_id.values()))
@@ -288,7 +286,6 @@ class LabwareView(HasState[LabwareState]):
             if (
                 isinstance(labware.location, DeckSlotLocation)
                 and labware.location.slotName == slot_name
-                and labware.id in allowed_ids
             ):
                 return labware
 

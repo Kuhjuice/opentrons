@@ -6,6 +6,7 @@ from opentrons.types import Point, DeckSlotName, MountType
 from opentrons_shared_data.labware.constants import WELL_NAME_PATTERN
 
 from .. import errors
+from ..errors import LabwareNotLoadedOnModuleError, LabwareNotLoadedOnLabwareError
 from ..types import (
     OFF_DECK_LOCATION,
     LoadedLabware,
@@ -99,6 +100,35 @@ class GeometryView:
         )
 
         return max(highest_labware_z, highest_module_z)
+
+    def get_highest_z_in_slot(self, slot: DeckSlotLocation) -> float:
+        """Get the highest Z-point of all items stacked in the given deck slot."""
+        slot_item = self.get_slot_item(slot.slotName)
+        if isinstance(slot_item, LoadedModule):
+            # get height of module + all labware on it
+            module_id = slot_item.id
+            try:
+                labware_id = self._labware.get_id_by_module(module_id=module_id)
+            except LabwareNotLoadedOnModuleError:
+                return self._modules.get_overall_height(module_id=module_id)
+            else:
+                return self.get_highest_z_of_labware_stack(labware_id)
+        elif isinstance(slot_item, LoadedLabware):
+            # get stacked heights of all labware in the slot
+            return self.get_highest_z_of_labware_stack(slot_item.id)
+
+
+    def get_highest_z_of_labware_stack(self, labware_id) -> float:
+        """Get the highest Z-point of the topmost labware in the stack of labware on the given labware.
+
+        If there's no labware on th given labware, returns highest z of the given labware.
+        """
+        try:
+            stacked_labware_id = self._labware.get_id_by_labware(labware_id)
+        except LabwareNotLoadedOnLabwareError:
+            return self.get_labware_highest_z(labware_id)
+        return self.get_highest_z_of_labware_stack(stacked_labware_id)
+
 
     def get_min_travel_z(
         self,
@@ -490,22 +520,16 @@ class GeometryView:
         return []
 
     # TODO(mc, 2022-12-09): enforce data integrity (e.g. one module per slot)
-    # rather than shunting this work to callers via `allowed_ids`.
-    # This has larger implications and is tied up in splitting LPC out of the protocol run
     def get_slot_item(
         self,
         slot_name: DeckSlotName,
-        allowed_labware_ids: Set[str],
-        allowed_module_ids: Set[str],
     ) -> Union[LoadedLabware, LoadedModule, None]:
         """Get the item present in a deck slot, if any."""
         maybe_labware = self._labware.get_by_slot(
             slot_name=slot_name,
-            allowed_ids=allowed_labware_ids,
         )
         maybe_module = self._modules.get_by_slot(
             slot_name=slot_name,
-            allowed_ids=allowed_module_ids,
         )
 
         return maybe_labware or maybe_module or None
