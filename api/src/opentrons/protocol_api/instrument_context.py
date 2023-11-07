@@ -224,8 +224,6 @@ class InstrumentContext(publisher.CommandPublisher):
                 reject_adapter=self.api_version >= APIVersion(2, 15),
             )
 
-
-
         c_vol = self._core.get_available_volume() if not volume else volume
         flow_rate = self._core.get_aspirate_flow_rate(rate)
 

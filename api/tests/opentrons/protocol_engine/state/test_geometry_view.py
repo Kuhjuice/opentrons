@@ -463,6 +463,65 @@ def test_get_all_labware_highest_z_with_modules(
     assert result == 1337.0
 
 
+# def test_get_highest_z_in_slot(
+#         decoy: Decoy,
+#         labware_view: LabwareView,
+#         module_view: ModuleView,
+#         subject: GeometryView,
+# ) -> None:
+#     """It should get the highest z point in the slot."""
+#     labware = LoadedLabware.construct(id="cool-labware")  # type: ignore[call-arg]
+#     module = LoadedModule.construct(id="cool-module")  # type: ignore[call-arg]
+#
+#     decoy.when(
+#         labware_view.get_by_slot(DeckSlotName.SLOT_1)
+#     ).then_return(None)
+#     decoy.when(
+#         labware_view.get_by_slot(DeckSlotName.SLOT_2)
+#     ).then_return(labware)
+#     decoy.when(
+#         labware_view.get_by_slot(DeckSlotName.SLOT_3)
+#     ).then_return(None)
+#
+#     decoy.when(
+#         module_view.get_by_slot(DeckSlotName.SLOT_1)
+#     ).then_return(None)
+#
+#
+# def test_get_highest_z_of_labware_stack(
+#         decoy: Decoy,
+#         labware_view: LabwareView,
+#         module_view: ModuleView,
+#         subject: GeometryView,
+# ) -> None:
+#     """It should get highest z in the stack of labware."""
+#     decoy.when(labware_view.get_id_by_labware("bottom-labware-id")).then_return(
+#         "stacked-labware-id"
+#     )
+#     labware_data = LoadedLabware(
+#         id="labware-id",
+#         loadName="load-name",
+#         definitionUri="definition-uri",
+#         location=DeckSlotLocation(slotName=DeckSlotName.SLOT_3),
+#         offsetId="offset-id",
+#     )
+#     slot_pos = Point(1, 2, 3)
+#     calibration_offset = LabwareOffsetVector(x=1, y=-2, z=3)
+#
+#     decoy.when(labware_view.get("labware-id")).then_return(labware_data)
+#     decoy.when(labware_view.get_definition("labware-id")).then_return(well_plate_def)
+#     decoy.when(labware_view.get_labware_offset_vector("labware-id")).then_return(
+#         calibration_offset
+#     )
+#     decoy.when(labware_view.get_slot_position(DeckSlotName.SLOT_3)).then_return(
+#         slot_pos
+#     )
+#
+#     highest_z = subject.get_labware_highest_z("labware-id")
+#
+#     assert highest_z == (well_plate_def.dimensions.zDimension + 3 + 3)
+
+
 @pytest.mark.parametrize(
     ["location", "min_z_height", "expected_min_z"],
     [
@@ -1243,49 +1302,20 @@ def test_get_slot_item(
     subject: GeometryView,
 ) -> None:
     """It should get items in certain slots."""
-    allowed_labware_ids = {"foo", "bar"}
-    allowed_module_ids = {"fizz", "buzz"}
     labware = LoadedLabware.construct(id="cool-labware")  # type: ignore[call-arg]
     module = LoadedModule.construct(id="cool-module")  # type: ignore[call-arg]
 
-    decoy.when(
-        labware_view.get_by_slot(DeckSlotName.SLOT_1, allowed_labware_ids)
-    ).then_return(None)
-    decoy.when(
-        labware_view.get_by_slot(DeckSlotName.SLOT_2, allowed_labware_ids)
-    ).then_return(labware)
-    decoy.when(
-        labware_view.get_by_slot(DeckSlotName.SLOT_3, allowed_labware_ids)
-    ).then_return(None)
+    decoy.when(labware_view.get_by_slot(DeckSlotName.SLOT_1)).then_return(None)
+    decoy.when(labware_view.get_by_slot(DeckSlotName.SLOT_2)).then_return(labware)
+    decoy.when(labware_view.get_by_slot(DeckSlotName.SLOT_3)).then_return(None)
 
-    decoy.when(
-        module_view.get_by_slot(DeckSlotName.SLOT_1, allowed_module_ids)
-    ).then_return(None)
-    decoy.when(
-        module_view.get_by_slot(DeckSlotName.SLOT_2, allowed_module_ids)
-    ).then_return(None)
-    decoy.when(
-        module_view.get_by_slot(DeckSlotName.SLOT_3, allowed_module_ids)
-    ).then_return(module)
+    decoy.when(module_view.get_by_slot(DeckSlotName.SLOT_1)).then_return(None)
+    decoy.when(module_view.get_by_slot(DeckSlotName.SLOT_2)).then_return(None)
+    decoy.when(module_view.get_by_slot(DeckSlotName.SLOT_3)).then_return(module)
 
-    assert (
-        subject.get_slot_item(
-            DeckSlotName.SLOT_1, allowed_labware_ids, allowed_module_ids
-        )
-        is None
-    )
-    assert (
-        subject.get_slot_item(
-            DeckSlotName.SLOT_2, allowed_labware_ids, allowed_module_ids
-        )
-        == labware
-    )
-    assert (
-        subject.get_slot_item(
-            DeckSlotName.SLOT_3, allowed_labware_ids, allowed_module_ids
-        )
-        == module
-    )
+    assert subject.get_slot_item(DeckSlotName.SLOT_1) is None
+    assert subject.get_slot_item(DeckSlotName.SLOT_2) == labware
+    assert subject.get_slot_item(DeckSlotName.SLOT_3) == module
 
 
 @pytest.mark.parametrize(

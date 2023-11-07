@@ -3,9 +3,6 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING, cast
 
-from opentrons import APIVersion
-from opentrons.hardware_control.instruments.nozzle_manager import \
-    NozzleConfigurationType
 from opentrons.types import Location, Mount
 from opentrons.hardware_control import SyncHardwareAPI
 from opentrons.hardware_control.dev_types import PipetteDict
@@ -114,7 +111,7 @@ class InstrumentCore(AbstractInstrument[WellCore]):
             in_place: whether this is a in-place command.
         """
         if well_core is None:
-            # TODO: log warning here that deck conflicts cannot be checked for partial tip config
+            # TODO: log warning here that deck conflicts cannot be checked for partial tip config when moving to coordinates
             if not in_place:
                 self._engine_client.move_to_coordinates(
                     pipette_id=self._pipette_id,

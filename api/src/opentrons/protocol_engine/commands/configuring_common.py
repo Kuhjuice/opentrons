@@ -3,6 +3,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from dataclasses import dataclass
+
 from opentrons.hardware_control.nozzle_manager import (
     NozzleMap,
 )

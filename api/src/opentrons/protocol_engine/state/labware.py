@@ -277,7 +277,8 @@ class LabwareView(HasState[LabwareState]):
 
     # TODO(mc, 2022-12-09): enforce data integrity (e.g. one labware per slot)
     def get_by_slot(
-        self, slot_name: DeckSlotName,
+        self,
+        slot_name: DeckSlotName,
     ) -> Optional[LoadedLabware]:
         """Get the labware located in a given slot, if any."""
         loaded_labware = reversed(list(self._state.labware_by_id.values()))

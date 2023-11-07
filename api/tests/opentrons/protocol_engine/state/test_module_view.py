@@ -1645,19 +1645,19 @@ def test_get_by_slot() -> None:
         },
     )
 
-    assert subject.get_by_slot(DeckSlotName.SLOT_1, {"1", "2"}) == LoadedModule(
+    assert subject.get_by_slot(DeckSlotName.SLOT_1) == LoadedModule(
         id="1",
         location=DeckSlotLocation(slotName=DeckSlotName.SLOT_1),
         model=ModuleModel.TEMPERATURE_MODULE_V1,
         serialNumber="serial-number-1",
     )
-    assert subject.get_by_slot(DeckSlotName.SLOT_2, {"1", "2"}) == LoadedModule(
+    assert subject.get_by_slot(DeckSlotName.SLOT_2) == LoadedModule(
         id="2",
         location=DeckSlotLocation(slotName=DeckSlotName.SLOT_2),
         model=ModuleModel.TEMPERATURE_MODULE_V2,
         serialNumber="serial-number-2",
     )
-    assert subject.get_by_slot(DeckSlotName.SLOT_3, {"1", "2"}) is None
+    assert subject.get_by_slot(DeckSlotName.SLOT_3) is None
 
 
 def test_get_by_slot_prefers_later() -> None:
@@ -1683,7 +1683,7 @@ def test_get_by_slot_prefers_later() -> None:
         },
     )
 
-    assert subject.get_by_slot(DeckSlotName.SLOT_1, {"1", "1-again"}) == LoadedModule(
+    assert subject.get_by_slot(DeckSlotName.SLOT_1) == LoadedModule(
         id="1-again",
         location=DeckSlotLocation(slotName=DeckSlotName.SLOT_1),
         model=ModuleModel.TEMPERATURE_MODULE_V1,
@@ -1714,7 +1714,7 @@ def test_get_by_slot_filter_ids() -> None:
         },
     )
 
-    assert subject.get_by_slot(DeckSlotName.SLOT_1, {"1"}) == LoadedModule(
+    assert subject.get_by_slot(DeckSlotName.SLOT_1) == LoadedModule(
         id="1",
         location=DeckSlotLocation(slotName=DeckSlotName.SLOT_1),
         model=ModuleModel.TEMPERATURE_MODULE_V1,

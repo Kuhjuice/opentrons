@@ -1,6 +1,6 @@
 """Geometry state getters."""
 import enum
-from typing import Optional, List, Set, Tuple, Union, cast
+from typing import Optional, List, Tuple, Union, cast
 
 from opentrons.types import Point, DeckSlotName, MountType
 from opentrons_shared_data.labware.constants import WELL_NAME_PATTERN
@@ -116,19 +116,19 @@ class GeometryView:
         elif isinstance(slot_item, LoadedLabware):
             # get stacked heights of all labware in the slot
             return self.get_highest_z_of_labware_stack(slot_item.id)
+        else:
+            return 0
 
-
-    def get_highest_z_of_labware_stack(self, labware_id) -> float:
+    def get_highest_z_of_labware_stack(self, labware_id: str) -> float:
         """Get the highest Z-point of the topmost labware in the stack of labware on the given labware.
 
-        If there's no labware on th given labware, returns highest z of the given labware.
+        If there is no labware on the given labware, returns highest z of the given labware.
         """
         try:
             stacked_labware_id = self._labware.get_id_by_labware(labware_id)
         except LabwareNotLoadedOnLabwareError:
             return self.get_labware_highest_z(labware_id)
         return self.get_highest_z_of_labware_stack(stacked_labware_id)
-
 
     def get_min_travel_z(
         self,

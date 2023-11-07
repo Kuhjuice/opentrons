@@ -487,7 +487,8 @@ class ModuleView(HasState[ModuleState]):
 
     # TODO(mc, 2022-12-09): enforce data integrity (e.g. one module per slot)
     def get_by_slot(
-        self, slot_name: DeckSlotName,
+        self,
+        slot_name: DeckSlotName,
     ) -> Optional[LoadedModule]:
         """Get the module located in a given slot, if any."""
         slots_by_id = reversed(list(self._state.slot_by_module_id.items()))

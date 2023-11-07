@@ -13,6 +13,7 @@ from opentrons.hardware_control.nozzle_manager import (
 from opentrons.types import MountType, Mount as HwMount
 
 from .. import errors
+from ..commands.configure_nozzle_layout import ConfigureNozzleLayoutPrivateResult
 from ..types import (
     LoadedPipette,
     MotorAxis,
@@ -152,7 +153,7 @@ class PipetteStore(HasState[PipetteState], HandlesActions):
                 nozzle_offset_z=config.nozzle_offset_z,
             )
             self._state.flow_rates_by_id[private_result.pipette_id] = config.flow_rates
-        elif isinstance(private_result, PipetteNozzleLayoutResultMixin):
+        elif isinstance(private_result, ConfigureNozzleLayoutPrivateResult):
             self._state.nozzle_configuration_by_id[
                 private_result.pipette_id
             ] = private_result.nozzle_map
