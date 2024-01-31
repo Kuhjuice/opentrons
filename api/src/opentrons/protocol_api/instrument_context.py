@@ -253,7 +253,11 @@ class InstrumentContext(publisher.CommandPublisher):
         else:
             c_vol = self._core.get_available_volume() if not volume else volume
         flow_rate = self._core.get_aspirate_flow_rate(rate)
-
+        # TODO: save well and volume somehow
+        vol_to_save = c_vol
+        well_to_save = well if well else self._get_last_location_by_api_version()
+        if well_to_save:
+            self._save_vol_and_loc(vol_to_save * -1, str(well_to_save.labware))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.aspirate(
@@ -413,7 +417,11 @@ class InstrumentContext(publisher.CommandPublisher):
             )
             # TODO publish this info
             return self
-
+        # TODO: save well and volume
+        vol_to_save = c_vol
+        well_to_save = well if well else self._get_last_location_by_api_version()
+        if well_to_save:
+            self._save_vol_and_loc(vol_to_save, str(well_to_save.labware))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.dispense(
@@ -572,7 +580,11 @@ class InstrumentContext(publisher.CommandPublisher):
                 in_place=False,
             )
             return self
-
+        # TODO: save well and volume
+        vol_to_save = self._core.get_available_volume()
+        well_to_save = well if well else self._get_last_location_by_api_version()
+        if well_to_save:
+            self._save_vol_and_loc(vol_to_save, str(well_to_save.labware))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.blow_out(instrument=self, location=move_to_location),
@@ -584,6 +596,17 @@ class InstrumentContext(publisher.CommandPublisher):
             )
 
         return self
+
+    def _save_vol_and_loc(self, vol: float, well: str) -> None:
+        self._saved_volumes
+        if well not in self._saved_volumes:
+            self._saved_volumes[well] = 0.0
+        self._saved_volumes[well] += vol
+        
+    def print_saved_volumes(self) -> None:
+        for well, volume in self._saved_volumes.items():
+            print(well, volume)
+    
 
     def _determine_speed(self, speed: float) -> float:
         if self.api_version < APIVersion(2, 4):
