@@ -106,6 +106,7 @@ class InstrumentContext(publisher.CommandPublisher):
             labware.Labware, TrashBin, WasteChute, None
         ] = trash
         self.requested_as = requested_as
+        self._saved_volumes: Dict[str, float] = {} 
 
     @property  # type: ignore
     @requires_version(2, 0)
@@ -257,7 +258,7 @@ class InstrumentContext(publisher.CommandPublisher):
         vol_to_save = c_vol
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
-            self._save_vol_and_loc(vol_to_save * -1, str(well_to_save.labware))
+            self._save_vol_and_loc(vol_to_save * -1, str(well_to_save.display_name))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.aspirate(
@@ -421,7 +422,7 @@ class InstrumentContext(publisher.CommandPublisher):
         vol_to_save = c_vol
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
-            self._save_vol_and_loc(vol_to_save, str(well_to_save.labware))
+            self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.dispense(
@@ -584,7 +585,7 @@ class InstrumentContext(publisher.CommandPublisher):
         vol_to_save = self._core.get_available_volume()
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
-            self._save_vol_and_loc(vol_to_save, str(well_to_save.labware))
+            self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.blow_out(instrument=self, location=move_to_location),
@@ -604,6 +605,7 @@ class InstrumentContext(publisher.CommandPublisher):
         self._saved_volumes[well] += vol
         
     def print_saved_volumes(self) -> None:
+        print("Beginning print for pipette", self.name, self.mount)
         for well, volume in self._saved_volumes.items():
             print(well, volume)
     
