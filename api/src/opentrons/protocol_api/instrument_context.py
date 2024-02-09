@@ -599,10 +599,10 @@ class InstrumentContext(publisher.CommandPublisher):
         return self
 
     def _save_vol_and_loc(self, vol: float, well: str) -> None:
-        self._saved_volumes
         if well not in self._saved_volumes:
             self._saved_volumes[well] = 0.0
         self._saved_volumes[well] += vol
+        
         
     def print_saved_volumes(self) -> None:
         print("Beginning print for pipette", self.name, self.mount)
