@@ -1,9 +1,10 @@
 import inspect
 from dataclasses import replace
 from opentrons import protocol_api, types
+import csv
 
 metadata = {
-    'protocolName': 'Simple Normalize Long Right DRYRUN.py',
+    'protocolName': 'Simple Normalize Long Right.py',
     'author': 'Opentrons <protocols@opentrons.com>',
     'source': 'Protocol Library',
 }
@@ -18,7 +19,7 @@ requirements = {
 DRYRUN = True  # True or False, DRYRUN = True will return tips, skip incubation times, shorten mix, for testing purposes
 MEASUREPAUSE = "NO"
 
-ABR_TEST                = True
+ABR_TEST                = False
 if ABR_TEST == True:
     DRYRUN              = True          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = False         # True = Used tips go in Trash, False = Used tips go back into rack
@@ -40,15 +41,15 @@ def run(protocol: protocol_api.ProtocolContext):
     # ========== FIRST ROW ===========
     protocol.comment("THIS IS A NO MODULE RUN")
     reservoir       = protocol.load_labware("nest_12_reservoir_15ml", "1")
-    sample_plate_1    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "3")
+    sample_plate_1    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "3", 'Sample Plate 1')
     # ========== SECOND ROW ==========
     tiprack_200_1   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '4')
     tiprack_200_2   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '5')
-    sample_plate_2    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "6")
+    sample_plate_2    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "6", "Sample Plate 2")
     # ========== THIRD ROW ===========
     tiprack_200_3   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '7')
     tiprack_200_4   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '8')
-    sample_plate_3    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "9")
+    sample_plate_3    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "9", "Sample Plate 3")
     # ========== FOURTH ROW ==========
     tiprack_200_5   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '10')
     tiprack_200_6   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '11')
@@ -265,5 +266,15 @@ def run(protocol: protocol_api.ProtocolContext):
                 p1000.touch_tip()
                 p1000.return_tip()
             current += 1
-        
-    p1000.print_saved_volumes()
+    sum_of_saved_volumes = p1000._saved_volumes 
+    for k,v in sum_of_saved_volumes.items():
+        print(k, v)
+    # Specify CSV file name
+    csv_file = 'ABR-End-Volumes/Simple Normalize Long Right End Vol.csv'
+    # Write dictionary to CSV
+    with open(csv_file, 'w', newline='') as file:
+        writer = csv.writer(file)
+        # writer.writeheader()
+        writer.writerow(['Location', 'Volume'])
+        for key, value in sum_of_saved_volumes.items():
+            writer.writerow([key, value])

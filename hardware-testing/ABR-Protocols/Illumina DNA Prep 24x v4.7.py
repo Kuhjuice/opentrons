@@ -856,15 +856,14 @@ def run(protocol: protocol_api.ProtocolContext):
         protocol.comment('Number of Resets: '+str(Resetcount))
 
     sum_of_saved_volumes = p50._saved_volumes 
-    print(sum_of_saved_volumes)
     for k, v in p1000._saved_volumes.items():
         if k not in sum_of_saved_volumes:
             sum_of_saved_volumes[k] = 0.0
         sum_of_saved_volumes[k] +=v
     for k,v in sum_of_saved_volumes.items():
         print(k, v)
-    # Specify CSV file name
-    csv_file = 'IlluminaDNAPrep24x v4.7 End Vol.csv'
+    #  Specify CSV file name
+    csv_file = 'ABR-End-Volumes/IlluminaDNAPrep24x v4.7 End Vol.csv'
     # Write dictionary to CSV
     with open(csv_file, 'w', newline='') as file:
         writer = csv.writer(file)
@@ -872,4 +871,5 @@ def run(protocol: protocol_api.ProtocolContext):
         writer.writerow(['Location', 'Volume'])
         for key, value in sum_of_saved_volumes.items():
             writer.writerow([key, value])
+        
         

@@ -287,7 +287,7 @@ def run(ctx):
     for k,v in sum_of_saved_volumes.items():
         print(k, v)
     # Specify CSV file name
-    csv_file = 'Dynabeads End Vol.csv'
+    csv_file = 'ABR-End-Volumes/Dynabeads End Vol.csv'
     # Write dictionary to CSV
     with open(csv_file, 'w', newline='') as file:
         writer = csv.writer(file)

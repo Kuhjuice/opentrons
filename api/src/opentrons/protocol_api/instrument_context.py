@@ -255,7 +255,13 @@ class InstrumentContext(publisher.CommandPublisher):
             c_vol = self._core.get_available_volume() if not volume else volume
         flow_rate = self._core.get_aspirate_flow_rate(rate)
         # TODO: save well and volume somehow
-        vol_to_save = c_vol
+        num_of_channels = (
+            self.active_channels
+            if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
+            else self.channels
+        )
+        print(num_of_channels)
+        vol_to_save = c_vol * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save * -1, str(well_to_save.display_name))
@@ -419,7 +425,13 @@ class InstrumentContext(publisher.CommandPublisher):
             # TODO publish this info
             return self
         # TODO: save well and volume
-        vol_to_save = c_vol
+        num_of_channels = (
+            self.active_channels
+            if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
+            else self.channels
+        )
+        print(num_of_channels)
+        vol_to_save = c_vol * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
@@ -583,6 +595,13 @@ class InstrumentContext(publisher.CommandPublisher):
             return self
         # TODO: save well and volume
         vol_to_save = self._core.get_available_volume()
+        num_of_channels = (
+            self.active_channels
+            if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
+            else self.channels
+        )
+        print(num_of_channels)
+        vol_to_save = vol_to_save * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
