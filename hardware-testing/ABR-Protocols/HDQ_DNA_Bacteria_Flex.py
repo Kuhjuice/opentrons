@@ -31,10 +31,8 @@ waste_vol = 0
 
 ABR_TEST                = True
 if ABR_TEST == True:
-    DRYRUN              = True          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = False         # True = Used tips go in Trash, False = Used tips go back into rack
 else:
-    DRYRUN              = False          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = True 
 
 # Start protocol
@@ -147,10 +145,10 @@ def run(ctx):
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, m.top())
                 m1000.move_to(m.center())
-                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=20)
+                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=0)
                 _waste_track(vol_per_trans)
                 m1000.blow_out(waste)
-                m1000.air_gap(20)
+                #m1000.air_gap(20)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip(tips_sn[8*i])
         m1000.flow_rate.aspirate = 300
 
@@ -251,7 +249,7 @@ def run(ctx):
                     m1000.dispense(tvol,src.bottom(5))
             for t in range(num_transfers):
                 m1000.aspirate(tvol,src.bottom(1))
-                m1000.air_gap(20)
+                #m1000.air_gap(20)
                 m1000.dispense(m1000.current_volume,TL_samples_m[i].top())
             
         for i in range(num_cols):
@@ -275,7 +273,7 @@ def run(ctx):
                 m1000.dispense(180,TL_samples_m[t].top(-5))
             m1000.aspirate(200,TL_samples_m[t].bottom(3))
             m1000.dispense(m1000.current_volume,samples_m[t].top())
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
     def AL_lysis(vol, source):
@@ -294,7 +292,7 @@ def run(ctx):
             tvol = vol/num_transfers
             for t in range(num_transfers):
                 m1000.aspirate(tvol,src.bottom(height))
-                m1000.air_gap(10)
+                #m1000.air_gap(10)
                 m1000.dispense(m1000.current_volume,samples_m[i].top())
             
         for i in range(num_cols):
@@ -343,11 +341,11 @@ def run(ctx):
                 if m1000.current_volume > 0:
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, source.top())
-                m1000.transfer(vol_per_trans, source, well.top(), air_gap=20,new_tip='never')
-                if t < num_trans - 1:
-                    m1000.air_gap(20)
+                m1000.transfer(vol_per_trans, source, well.top(), air_gap=0,new_tip='never')
+                #if t < num_trans - 1:
+                    #m1000.air_gap(20)
             m1000.blow_out(well.top(-2))
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
         
         ctx.comment("-----Mixing Beads in Plate-----")
         for i in range(num_cols):
@@ -405,7 +403,7 @@ def run(ctx):
             for n in range(num_trans):
                 if m1000.current_volume > 0:
                     m1000.dispense(m1000.current_volume, src.top())
-                m1000.transfer(vol_per_trans, src, m.top(), air_gap=20,new_tip='never')
+                m1000.transfer(vol_per_trans, src, m.top(), air_gap=0,new_tip='never')
 
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
         ctx.comment("-----Mixing Wash Buffer and Sample-----")
@@ -448,8 +446,8 @@ def run(ctx):
         for i, m in enumerate(samples_m):
             src = elution_one[i//3]
             m1000.aspirate(350, src)
-            m1000.air_gap(20)
-            m1000.dispense(370,m.top(-3))
+            #m1000.air_gap(20)
+            m1000.dispense(350,m.top(-3))
             m1000.blow_out()
 
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
@@ -473,7 +471,7 @@ def run(ctx):
         m1000.flow_rate.aspirate = 20  
         for i, m in enumerate(samples_m):  
             m1000.aspirate(vol, elution_samples_m[i].bottom(0.5)) #orignal = 0.1
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
             m1000.dispense(m1000.current_volume, m.top(-3))
             #mixing(m,m1000,90,reps=8 if not dry_run else 1)  
         
@@ -501,9 +499,9 @@ def run(ctx):
             tiptrack(m1000,tips)
             m1000.flow_rate.dispense = 100
             m1000.flow_rate.aspirate = 150
-            m1000.transfer(vol, m.bottom(0.5), e.bottom(5), air_gap=20, new_tip='never')
+            m1000.transfer(vol, m.bottom(0.5), e.bottom(5), air_gap=0, new_tip='never')
             m1000.blow_out(e.top(-2))
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
     """

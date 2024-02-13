@@ -44,10 +44,8 @@ waste_vol_chk = 0
 
 ABR_TEST                = True
 if ABR_TEST == True:
-    DRYRUN              = True          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = False         # True = Used tips go in Trash, False = Used tips go back into rack
 else:
-    DRYRUN              = False          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = True 
 
 #########################
@@ -100,8 +98,9 @@ def run(ctx):
             start_loc = start[i]
             end_loc = end[i]
             p1000.aspirate(vol1, start_loc.bottom(z=ASP_HEIGHT), rate = 2)
-            p1000.air_gap(10)
-            p1000.dispense(vol1+10, end_loc.bottom(z=15), rate = 2)
+            # p1000.air_gap(10)
+            # p1000.dispense(vol1+10, end_loc.bottom(z=15), rate = 2)
+            p1000.dispense(vol1, end_loc.bottom(z=15), rate = 2)
             p1000.blow_out()
             p1000.touch_tip()
             p1000.return_tip() if TIP_TRASH == False else p1000.drop_tip()
@@ -114,8 +113,9 @@ def run(ctx):
                 start_loc = start[j]
                 end_loc = end[j]
                 p1000.aspirate(vol2, start_loc.bottom(z=ASP_HEIGHT), rate = 2)
-                p1000.air_gap(10)
-                p1000.dispense(vol2+10, end_loc.top(z=drop_height), rate = 2)    
+                # p1000.air_gap(10)
+                # p1000.dispense(vol2+10, end_loc.top(z=drop_height), rate = 2)  
+                p1000.dispense(vol2, end_loc.top(z=drop_height), rate = 2)
                 p1000.blow_out()
             p1000.return_tip() if TIP_TRASH == False else p1000.drop_tip()
 
@@ -129,8 +129,8 @@ def run(ctx):
                 end_loc_gap = end[j*8] 
                 if liquid == 2: p1000_single.mix(2, vol*0.75, start_loc.bottom(z=ASP_HEIGHT*5), rate = 2)
                 p1000_single.aspirate(vol, start_loc.bottom(z=ASP_HEIGHT*5), rate = 2)
-                p1000_single.air_gap(10)
-                p1000_single.dispense(10, end_loc_gap.top(z=-5))
+                # p1000_single.air_gap(10)
+                # p1000_single.dispense(10, end_loc_gap.top(z=-5))
                 for jj in range(8):
                     end_loc = end[j*8+jj]
                     p1000_single.dispense(vol2, end_loc.bottom(z=10), rate = 0.75)  
@@ -156,8 +156,9 @@ def run(ctx):
             start_loc = start[k]
             end_loc = waste
             p1000.aspirate(vol3, start_loc.bottom(z=ASP_HEIGHT), rate = 0.3)
-            p1000.air_gap(10)
-            p1000.dispense(vol3+10, end_loc.top(z=-5), rate = 2)
+            # p1000.air_gap(10)
+            # p1000.dispense(vol3+10, end_loc.top(z=-5), rate = 2)
+            p1000.dispense(vol3, end_loc.top(z=-5), rate = 2)
             p1000.blow_out()
             p1000.return_tip()
         waste_vol = vol3 * NUM_COL * 8
@@ -180,7 +181,8 @@ def run(ctx):
                      )
     h_s.close_labware_latch()
     ctx.delay(minutes=MAG_DELAY_MIN)
-    discard(BEADS_VOL*1.1, working_cols)
+    #discard(BEADS_VOL*1.1, working_cols)
+    discard(BEADS_VOL*1, working_cols)
 
     h_s.open_labware_latch()
     #ctx.pause('Move the Working Plate to the Shaker')
@@ -218,8 +220,8 @@ def run(ctx):
 
     ctx.delay(minutes=MAG_DELAY_MIN)
     vol_total = SAMPLE_VOL + AB_VOL
-    discard(vol_total*1.1, working_cols)
-
+    #discard(vol_total*1.1, working_cols)
+    discard(vol_total*1, working_cols)
     ## Wash
     for _ in range(WASH_TIMES):
         h_s.open_labware_latch()
@@ -241,7 +243,8 @@ def run(ctx):
                          )
         h_s.close_labware_latch()
         ctx.delay(minutes=MAG_DELAY_MIN)
-        discard(WASH_VOL*1.1, working_cols)
+        #discard(WASH_VOL*1.1, working_cols)
+        discard(WASH_VOL*1, working_cols)
 
     ## Elution      
     h_s.open_labware_latch()
@@ -275,7 +278,8 @@ def run(ctx):
                          )
         h_s.close_labware_latch()
         ctx.delay(minutes=MAG_DELAY_MIN)
-        transfer_plate_to_plate(ELUTION_VOL*1.1, working_cols, final_cols, 6, -5)
+        #transfer_plate_to_plate(ELUTION_VOL*1.1, working_cols, final_cols, 6, -5)
+        transfer_plate_to_plate(ELUTION_VOL*1, working_cols, final_cols, 6, -5)
         #ctx.pause('Protocol Complete')
         temp.deactivate()
     sum_of_saved_volumes = p1000_single._saved_volumes 

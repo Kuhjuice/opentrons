@@ -1,7 +1,6 @@
 import inspect
 from dataclasses import replace
 from opentrons import protocol_api, types
-import csv
 
 metadata = {
     'protocolName': 'Simple Normalize Long Right.py',
@@ -41,15 +40,15 @@ def run(protocol: protocol_api.ProtocolContext):
     # ========== FIRST ROW ===========
     protocol.comment("THIS IS A NO MODULE RUN")
     reservoir       = protocol.load_labware("nest_12_reservoir_15ml", "1")
-    sample_plate_1    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "3", 'Sample Plate 1')
+    sample_plate_1    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "3")
     # ========== SECOND ROW ==========
     tiprack_200_1   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '4')
     tiprack_200_2   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '5')
-    sample_plate_2    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "6", "Sample Plate 2")
+    sample_plate_2    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "6")
     # ========== THIRD ROW ===========
     tiprack_200_3   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '7')
     tiprack_200_4   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '8')
-    sample_plate_3    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "9", "Sample Plate 3")
+    sample_plate_3    = protocol.load_labware("armadillo_96_wellplate_200ul_pcr_full_skirt", "9")
     # ========== FOURTH ROW ==========
     tiprack_200_5   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '10')
     tiprack_200_6   = protocol.load_labware('opentrons_flex_96_tiprack_200ul',  '11')
@@ -167,7 +166,7 @@ def run(protocol: protocol_api.ProtocolContext):
 
     data = [r.split(",") for r in sample_quant_csv.strip().splitlines() if r][1:]
 
-    for X in range(2):
+    for X in range(1):
         protocol.comment("==============================================")
         protocol.comment("Adding Dye Sample Plate 1")
         protocol.comment("==============================================")
@@ -266,11 +265,12 @@ def run(protocol: protocol_api.ProtocolContext):
                 p1000.touch_tip()
                 p1000.return_tip()
             current += 1
+    import csv
     sum_of_saved_volumes = p1000._saved_volumes 
     for k,v in sum_of_saved_volumes.items():
         print(k, v)
     # Specify CSV file name
-    csv_file = 'ABR-End-Volumes/Simple Normalize Long Right End Vol.csv'
+    csv_file = 'Simple Normalize Long End Vol.csv'
     # Write dictionary to CSV
     with open(csv_file, 'w', newline='') as file:
         writer = csv.writer(file)

@@ -33,10 +33,8 @@ dry_run = True
 
 ABR_TEST                = True
 if ABR_TEST == True:
-    DRYRUN              = True          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = False         # True = Used tips go in Trash, False = Used tips go back into rack
 else:
-    DRYRUN              = False          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = True 
 
 
@@ -149,9 +147,10 @@ def run(ctx):
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, m.top())
                 m1000.move_to(m.center())
-                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=20)
+                #m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=20)
+                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=0)
                 m1000.blow_out(waste)
-                m1000.air_gap(20)
+                #m1000.air_gap(20)
                 m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip(tips_sn[8*i])
 
         m1000.flow_rate.aspirate = 300
@@ -264,7 +263,7 @@ def run(ctx):
             #Transfer Shield and PK
             for t in range(num_transfers):
                 m1000.aspirate(tvol,src.bottom(1))
-                m1000.air_gap(10)
+                #m1000.air_gap(10)
                 m1000.dispense(m1000.current_volume,samples_m[i].top())
 
         #Mix shield and pk with samples
@@ -309,11 +308,12 @@ def run(ctx):
                 if m1000.current_volume > 0:
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, source.top())
-                m1000.transfer(vol_per_trans, source, well.top(), air_gap=20,new_tip='never')
-                m1000.air_gap(20)
+                #m1000.transfer(vol_per_trans, source, well.top(), air_gap=20,new_tip='never')
+                m1000.transfer(vol_per_trans, source, well.top(), air_gap=0,new_tip='never')
+                #m1000.air_gap(20)
             bead_mixing(well,m1000,vol_per_trans,reps=8 if not dry_run else 1)
             m1000.blow_out()
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
         h_s.set_and_wait_for_shake_speed(1800)
@@ -350,8 +350,9 @@ def run(ctx):
                 if m1000.current_volume > 0:
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, source.top())
-                m1000.transfer(vol_per_trans, source.bottom(height), well.top(), air_gap=20,new_tip='never')
-                m1000.air_gap(20)
+                m1000.transfer(vol_per_trans, source.bottom(height), well.top(), air_gap=0,new_tip='never')
+                #m1000.transfer(vol_per_trans, source.bottom(height), well.top(), air_gap=20,new_tip='never')
+                #m1000.air_gap(20)
 
         for i in range(num_cols):
             if i != 0:
@@ -410,7 +411,9 @@ def run(ctx):
             for n in range(num_trans):
                 if m1000.current_volume > 0:
                     m1000.dispense(m1000.current_volume, src.top())
-                m1000.transfer(vol_per_trans, src.bottom(height), m.top(), air_gap=20,new_tip='never')
+                #m1000.transfer(vol_per_trans, src.bottom(height), m.top(), air_gap=20,new_tip='never')
+                m1000.transfer(vol_per_trans, src.bottom(height), m.top(), air_gap=0,new_tip='never')
+                
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
         h_s.set_and_wait_for_shake_speed(1800)
@@ -434,7 +437,7 @@ def run(ctx):
         tiptrack(m1000,tips)
         for i, m in enumerate(samples_m):
             m1000.aspirate(vol, elution_solution)
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
             m1000.dispense(m1000.current_volume, m.top(-3))
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
@@ -458,9 +461,10 @@ def run(ctx):
             tiptrack(m1000,tips)
             m1000.flow_rate.dispense = 100
             m1000.flow_rate.aspirate = 25
-            m1000.transfer(vol, m.bottom(0.5), e.bottom(5), air_gap=20, new_tip='never') 
+            #m1000.transfer(vol, m.bottom(0.5), e.bottom(5), air_gap=20, new_tip='never') 
+            m1000.transfer(vol, m.bottom(0.5), e.bottom(5), air_gap=0, new_tip='never') 
             m1000.blow_out(e.top(-2))
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
 

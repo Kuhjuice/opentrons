@@ -33,10 +33,8 @@ waste_vol = 0
 
 ABR_TEST                = True
 if ABR_TEST == True:
-    DRYRUN              = True          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = False         # True = Used tips go in Trash, False = Used tips go back into rack
 else:
-    DRYRUN              = False          # True = skip incubation times, shorten mix, for testing purposes
     TIP_TRASH           = True 
 
 # Start protocol
@@ -146,9 +144,10 @@ def run(ctx):
                     # void air gap if necessary
                     m1000.dispense(m1000.current_volume, m.top())
                 m1000.move_to(m.center())
-                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=20)
+                #m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=20)
+                m1000.transfer(vol_per_trans, loc, waste, new_tip='never',air_gap=0)
                 m1000.blow_out(waste)
-                m1000.air_gap(20)
+                #m1000.air_gap(20)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip(tips_sn[8*i])
         m1000.flow_rate.aspirate = 300
         #Move Plate From Magnet to H-S
@@ -290,11 +289,12 @@ def run(ctx):
             #Transfer cells+lysis/bind to wells with beads
             tiptrack(m1000,tips)
             m1000.aspirate(175,cells_m[i].bottom(0.5))
-            m1000.air_gap(10)
-            m1000.dispense(185,well.bottom(8))
+            #m1000.air_gap(10)
+            #m1000.dispense(185,well.bottom(8))
+            m1000.dispense(175, well.bottom(8))
             #Mix after transfer
             bead_mixing(well,m1000,130, reps=5 if not dry_run else 1)
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
         h_s.set_and_wait_for_shake_speed(2000)
@@ -337,11 +337,11 @@ def run(ctx):
             src = source
             for n in range(num_trans):
                 m1000.aspirate(vol_per_trans, src)
-                m1000.air_gap(10)
+                #m1000.air_gap(10)
                 m1000.dispense(m1000.current_volume, m.top(-2))
                 ctx.delay(seconds=2)
                 m1000.blow_out(m.top(-2))
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
         #Shake for 5 minutes to mix wash with beads
@@ -376,7 +376,7 @@ def run(ctx):
                 m1000.aspirate(vol_per_trans, src.bottom(0.5))
                 m1000.dispense(vol_per_trans, m.top(-3))
             m1000.blow_out(m.top(-3))
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
         
         m1000.flow_rate.aspirate = 300
 
@@ -402,9 +402,11 @@ def run(ctx):
             for n in range(num_trans):
                 if m1000.current_volume > 0:
                     m1000.dispense(m1000.current_volume, src.top())
-                m1000.transfer(vol_per_trans, src, m.top(), air_gap=20,new_tip='never')
+                #m1000.transfer(vol_per_trans, src, m.top(), air_gap=20,new_tip='never')
+                m1000.transfer(vol_per_trans, src, m.top(), air_gap=0,new_tip='never')
+                
             m1000.blow_out(m.top(-3))
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
         
         m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
             
@@ -433,10 +435,10 @@ def run(ctx):
         for i, m in enumerate(samples_m):
             loc = m.top(-2)
             m1000.aspirate(vol, elution_solution[i])
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
             m1000.dispense(m1000.current_volume, loc)
             m1000.blow_out(m.top(-3))
-            m1000.air_gap(10)
+            #m1000.air_gap(10)
            
         m1000.flow_rate.aspirate = 300    
 
@@ -474,9 +476,10 @@ def run(ctx):
         for i, (m, e) in enumerate(zip(samples_m, elution_samples_m)):
             tiptrack(m1000,tips)
             loc = m.bottom(0.5)
-            m1000.transfer(vol, loc, e.bottom(5), air_gap=20, new_tip='never')
+            #m1000.transfer(vol, loc, e.bottom(5), air_gap=20, new_tip='never')
+            m1000.transfer(vol, loc, e.bottom(5), air_gap=0, new_tip='never')
             m1000.blow_out(e.top(-2))
-            m1000.air_gap(20)
+            #m1000.air_gap(20)
             m1000.return_tip() if TIP_TRASH == False else m1000.drop_tip()
 
     """
@@ -507,7 +510,7 @@ def run(ctx):
     for k,v in sum_of_saved_volumes.items():
         print(k, v)
     # Specify CSV file name
-    csv_file = 'Magmax RNA Cells Flex End Vol.csv'
+    csv_file = 'ABR-End-Volumes/Magmax RNA Cells Flex End Vol.csv'
     # Write dictionary to CSV
     with open(csv_file, 'w', newline='') as file:
         writer = csv.writer(file)
