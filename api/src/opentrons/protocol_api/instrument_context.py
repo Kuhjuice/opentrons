@@ -162,7 +162,7 @@ class InstrumentContext(publisher.CommandPublisher):
         self,
         volume: Optional[float] = None,
         location: Optional[Union[types.Location, labware.Well]] = None,
-        rate: float = 1.0,
+        rate: float = 1.0, 
     ) -> InstrumentContext:
         """
         Draw liquid into a pipette tip.
@@ -260,11 +260,12 @@ class InstrumentContext(publisher.CommandPublisher):
             if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
             else self.channels
         )
-        print(num_of_channels)
         vol_to_save = c_vol * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save * -1, str(well_to_save.display_name))
+        else:
+            raise KeyError('No labware to save.')
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.aspirate(
@@ -430,11 +431,12 @@ class InstrumentContext(publisher.CommandPublisher):
             if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
             else self.channels
         )
-        print(num_of_channels)
         vol_to_save = c_vol * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
+        else:
+            raise KeyError('No labware to save.')
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.dispense(
@@ -600,11 +602,12 @@ class InstrumentContext(publisher.CommandPublisher):
             if self._api_version >= _PARTIAL_NOZZLE_CONFIGURATION_ADDED_IN
             else self.channels
         )
-        print(num_of_channels)
         vol_to_save = vol_to_save * num_of_channels
         well_to_save = well if well else self._get_last_location_by_api_version()
         if well_to_save:
             self._save_vol_and_loc(vol_to_save, str(well_to_save.display_name))
+        else:
+            raise KeyError('No labware to save.')
         with publisher.publish_context(
             broker=self.broker,
             command=cmds.blow_out(instrument=self, location=move_to_location),
@@ -765,6 +768,7 @@ class InstrumentContext(publisher.CommandPublisher):
         target = loc.labware.as_well().top(height)
         self.move_to(target, publish=False)
         self.aspirate(volume)
+        #self.aspirate(0)
         return self
 
     @publisher.publish(command=cmds.return_tip)
