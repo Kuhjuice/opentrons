@@ -318,9 +318,13 @@ async def create_protocol(
         analysis_id=analysis_id,
         run_time_param_values=parsed_rtp,
     )
+
+    # TODO: Wait until RTPs are available in the runner
+    rtps = protocol_analyzer.current_runner.run_time_parameters
     pending_analysis = analysis_store.add_pending(
         protocol_id=protocol_id,
         analysis_id=analysis_id,
+        rtp_values=rtps
     )
 
     data = Protocol(
@@ -380,10 +384,13 @@ async def _start_new_analysis_if_necessary(
             run_time_param_values=rtp_values,
         )
         started_new_analysis = True
+        # TODO: Wait until RTPs are available in the runner
+        rtps = protocol_analyzer.current_runner.run_time_parameters
         analyses.append(
             analysis_store.add_pending(
                 protocol_id=protocol_id,
                 analysis_id=analysis_id,
+                rtp_values=rtps
             )
         )
     return analyses, started_new_analysis

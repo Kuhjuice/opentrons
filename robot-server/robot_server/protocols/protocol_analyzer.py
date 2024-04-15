@@ -6,6 +6,7 @@ from opentrons import protocol_runner
 from opentrons.protocol_engine.errors import ErrorOccurrence
 from opentrons.protocol_engine.types import RunTimeParamValuesType
 import opentrons.util.helpers as datetime_helper
+from opentrons.protocol_runner import AbstractRunner
 
 import robot_server.errors.error_mappers as em
 
@@ -24,6 +25,11 @@ class ProtocolAnalyzer:
     ) -> None:
         """Initialize the analyzer and its dependencies."""
         self._analysis_store = analysis_store
+        self._current_runner: Optional[AbstractRunner] = None
+
+    @property
+    def current_runner(self) -> Optional[AbstractRunner]:
+        return self._current_runner
 
     async def analyze(
         self,
@@ -32,16 +38,17 @@ class ProtocolAnalyzer:
         run_time_param_values: Optional[RunTimeParamValuesType],
     ) -> None:
         """Analyze a given protocol, storing the analysis when complete."""
-        runner = await protocol_runner.create_simulating_runner(
+        self._current_runner = await protocol_runner.create_simulating_runner(
             robot_type=protocol_resource.source.robot_type,
             protocol_config=protocol_resource.source.config,
         )
         try:
-            result = await runner.run(
+            result = await self._current_runner.run(
                 protocol_source=protocol_resource.source,
                 deck_configuration=[],
                 run_time_param_values=run_time_param_values,
             )
+            self._current_runner = None
         except BaseException as error:
             internal_error = em.map_unexpected_error(error=error)
             await self._analysis_store.update(
@@ -68,7 +75,6 @@ class ProtocolAnalyzer:
             return
 
         log.info(f'Completed analysis "{analysis_id}".')
-
         await self._analysis_store.update(
             analysis_id=analysis_id,
             robot_type=protocol_resource.source.robot_type,

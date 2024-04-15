@@ -67,6 +67,7 @@ class PendingAnalysis(BaseModel):
         AnalysisStatus.PENDING,
         description="Status marking the analysis as pending",
     )
+    runTimeParameters: List[RunTimeParameter]
 
 
 class CompletedAnalysis(BaseModel):
