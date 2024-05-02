@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import List, Optional, Union, cast
+from typing import List, Optional, Union, cast, Dict
 
 from opentrons_shared_data.labware.dev_types import LabwareDefinition
 from opentrons_shared_data.module.dev_types import ModuleModel, ModuleType
@@ -62,6 +62,7 @@ class ModuleContext(CommandPublisher):
         self._protocol_core = protocol_core
         self._core_map = core_map
         self._api_version = api_version
+        self._open_close_count: Dict[str, float] = {}
 
     @property  # type: ignore[misc]
     @requires_version(2, 0)
@@ -109,7 +110,13 @@ class ModuleContext(CommandPublisher):
         ), "Labware is not configured with this module as its parent"
 
         return self._core.geometry.add_labware(labware)
-
+    
+    def _open_close_counter(self):
+        serial = self._core.get_serial_number()
+        if serial not in self._open_close_count:
+            self._open_close_count[serial] = 0.0
+        self._open_close_count[serial] += 1
+        
     def load_labware(
         self,
         name: str,
@@ -521,12 +528,14 @@ class ThermocyclerContext(ModuleContext):
     @requires_version(2, 0)
     def open_lid(self) -> str:
         """Open the lid."""
+        self._open_close_counter()
         return self._core.open_lid().value
 
     @publish(command=cmds.thermocycler_close)
     @requires_version(2, 0)
     def close_lid(self) -> str:
         """Close the lid."""
+        self._open_close_counter()
         return self._core.close_lid().value
 
     @publish(command=cmds.thermocycler_set_block_temp)
@@ -914,6 +923,8 @@ class HeaterShakerContext(ModuleContext):
             if they are parked adjacent to the left or right of the Heater-Shaker.
         """
         self._core.open_labware_latch()
+        self._open_close_counter()
+
 
     @requires_version(2, 13)
     @publish(command=cmds.heater_shaker_close_labware_latch)
@@ -924,6 +935,8 @@ class HeaterShakerContext(ModuleContext):
         even if the latch was manually closed before starting the protocol.
         """
         self._core.close_labware_latch()
+        self._open_close_counter()
+
 
     @requires_version(2, 13)
     @publish(command=cmds.heater_shaker_deactivate_shaker)
