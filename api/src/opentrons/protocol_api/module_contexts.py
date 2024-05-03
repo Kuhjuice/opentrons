@@ -63,6 +63,8 @@ class ModuleContext(CommandPublisher):
         self._core_map = core_map
         self._api_version = api_version
         self._open_close_count: Dict[str, float] = {}
+        self._temp_switch_count: Dict[str,float] = {}
+        self._home_count: Dict[str,float] = {}
 
     @property  # type: ignore[misc]
     @requires_version(2, 0)
@@ -111,11 +113,23 @@ class ModuleContext(CommandPublisher):
 
         return self._core.geometry.add_labware(labware)
     
-    def _open_close_counter(self):
-        serial = self._core.get_serial_number()
-        if serial not in self._open_close_count:
-            self._open_close_count[serial] = 0.0
-        self._open_close_count[serial] += 1
+    def _open_close_counter(self, part_name: str):
+        """Counts Number of Open/Close Cycles."""
+        if part_name not in self._open_close_count:
+            self._open_close_count[part_name] = 0
+        self._open_close_count[part_name] += 0.5
+        
+    def _home_counter(self, action_name):
+        """Counts Number of heater shaker homes."""
+        if action_name not in self._home_count:
+            self._home_count[action_name] = 0
+        self._home_count[action_name] += 1
+        
+    def _temp_switch_counter(self, action_name: str):
+        """Counts Number of Times Module Changes temperature."""
+        if action_name not in self._temp_switch_count:
+            self._temp_switch_count[action_name] = 0
+        self._temp_switch_count[action_name] +=1 
         
     def load_labware(
         self,
@@ -343,6 +357,7 @@ class TemperatureModuleContext(ModuleContext):
         """
         self._core.set_target_temperature(celsius)
         self._core.wait_for_target_temperature()
+        self._temp_switch_counter("# of TM Temp Changes")
 
     @publish(command=cmds.tempdeck_set_temp)
     @requires_version(2, 3)
@@ -352,6 +367,8 @@ class TemperatureModuleContext(ModuleContext):
         :param celsius: A value between 4 and 95, representing the target temperature in °C.
         """
         self._core.set_target_temperature(celsius)
+        self._temp_switch_counter("# of TM Temp Changes")
+
 
     @publish(command=cmds.tempdeck_await_temp)
     @requires_version(2, 3)
@@ -528,14 +545,14 @@ class ThermocyclerContext(ModuleContext):
     @requires_version(2, 0)
     def open_lid(self) -> str:
         """Open the lid."""
-        self._open_close_counter()
+        self._open_close_counter("# of TC Lid Open/Close")
         return self._core.open_lid().value
 
     @publish(command=cmds.thermocycler_close)
     @requires_version(2, 0)
     def close_lid(self) -> str:
         """Close the lid."""
-        self._open_close_counter()
+        self._open_close_counter("# of TC Lid Open/Close")
         return self._core.close_lid().value
 
     @publish(command=cmds.thermocycler_set_block_temp)
@@ -579,6 +596,7 @@ class ThermocyclerContext(ModuleContext):
             block_max_volume=block_max_volume,
         )
         self._core.wait_for_block_temperature()
+        self._temp_switch_counter("# of TC Block Temp Changes")
 
     @publish(command=cmds.thermocycler_set_lid_temperature)
     @requires_version(2, 0)
@@ -596,6 +614,7 @@ class ThermocyclerContext(ModuleContext):
         """
         self._core.set_target_lid_temperature(celsius=temperature)
         self._core.wait_for_lid_temperature()
+        self._temp_switch_counter("# of TC Lid Temp Changes")
 
     @publish(command=cmds.thermocycler_execute_profile)
     @requires_version(2, 0)
@@ -632,6 +651,9 @@ class ThermocyclerContext(ModuleContext):
             repetitions=repetitions,
             block_max_volume=block_max_volume,
         )
+        total_changes = steps * repetitions
+        for i in total_changes:
+            self._temp_switch_counter("# of TC Block Temp Changes")
 
     @publish(command=cmds.thermocycler_deactivate_lid)
     @requires_version(2, 0)
@@ -923,7 +945,7 @@ class HeaterShakerContext(ModuleContext):
             if they are parked adjacent to the left or right of the Heater-Shaker.
         """
         self._core.open_labware_latch()
-        self._open_close_counter()
+        self._open_close_counter("# of HS Latch/Open Close")
 
 
     @requires_version(2, 13)
@@ -935,7 +957,7 @@ class HeaterShakerContext(ModuleContext):
         even if the latch was manually closed before starting the protocol.
         """
         self._core.close_labware_latch()
-        self._open_close_counter()
+        self._open_close_counter("# of HS Latch/Open Close")
 
 
     @requires_version(2, 13)
@@ -946,6 +968,7 @@ class HeaterShakerContext(ModuleContext):
         Decelerating to 0 rpm typically only takes a few seconds.
         """
         self._core.deactivate_shaker()
+        self._home_counter("# of HS Homes")
 
     @requires_version(2, 13)
     @publish(command=cmds.heater_shaker_deactivate_heater)

@@ -625,13 +625,11 @@ class InstrumentContext(publisher.CommandPublisher):
             self._saved_volumes[well] = 0.0
         self._saved_volumes[well] += vol
         
-        
     def print_saved_volumes(self) -> None:
         print("Beginning print for pipette", self.name, self.mount)
         for well, volume in self._saved_volumes.items():
             print(well, volume)
     
-
     def _determine_speed(self, speed: float) -> float:
         if self.api_version < APIVersion(2, 4):
             return clamp_value(speed, 80, 20, "touch_tip:")
@@ -768,7 +766,6 @@ class InstrumentContext(publisher.CommandPublisher):
         target = loc.labware.as_well().top(height)
         self.move_to(target, publish=False)
         self.aspirate(volume)
-        #self.aspirate(0)
         return self
 
     @publisher.publish(command=cmds.return_tip)
