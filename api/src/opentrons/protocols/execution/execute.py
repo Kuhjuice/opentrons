@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 
-from opentrons.protocol_api import ProtocolContext, ParameterContext
+from opentrons.protocol_api import ProtocolContext, ParameterContext, Parameters
 from opentrons.protocol_engine.types import RunTimeParamValuesType
 from opentrons.protocols.execution.execute_python import run_python
 from opentrons.protocols.execution.json_dispatchers import (
@@ -23,6 +23,7 @@ def run_protocol(
     context: ProtocolContext,
     parameter_context: Optional[ParameterContext] = None,
     run_time_param_overrides: Optional[RunTimeParamValuesType] = None,
+    rtp_params: Optional[Parameters] = None,
 ) -> None:
     """Run a protocol.
 
@@ -42,6 +43,7 @@ def run_protocol(
                 context=context,
                 parameter_context=parameter_context,
                 run_time_param_overrides=run_time_param_overrides,
+                rtp_params=rtp_params,
             )
         else:
             raise RuntimeError(f"Unsupported python API version: {protocol.api_level}")

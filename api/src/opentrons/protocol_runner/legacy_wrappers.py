@@ -32,6 +32,7 @@ from opentrons.protocol_api import (
     Well as LegacyWell,
     ParameterContext,
     create_protocol_context,
+    Parameters,
 )
 from opentrons.protocol_api.core.engine import ENGINE_CORE_API_VERSION
 from opentrons.protocol_api.core.legacy.load_info import (
@@ -175,10 +176,16 @@ class LegacyExecutor:
         context: LegacyProtocolContext,
         parameter_context: Optional[ParameterContext],
         run_time_param_values: Optional[RunTimeParamValuesType],
+        rtp_params: Optional[Parameters],
     ) -> None:
         """Execute a PAPIv2 protocol with a given ProtocolContext in a child thread."""
         await to_thread.run_sync(
-            run_protocol, protocol, context, parameter_context, run_time_param_values
+            run_protocol,
+            protocol,
+            context,
+            parameter_context,
+            run_time_param_values,
+            rtp_params,
         )
 
 

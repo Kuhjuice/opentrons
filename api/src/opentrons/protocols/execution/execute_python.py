@@ -90,6 +90,7 @@ def run_python(
     context: ProtocolContext,
     parameter_context: ParameterContext,
     run_time_param_overrides: Optional[RunTimeParamValuesType] = None,
+    rtp_params: Optional[Parameters] = None,
 ) -> None:
     new_globs: Dict[Any, Any] = {}
     exec(proto.contents, new_globs)
@@ -110,9 +111,8 @@ def run_python(
         filename = proto.filename or "<protocol>"
 
     if new_globs.get("add_parameters"):
-        context._params = _parse_and_set_parameters(
-            parameter_context, run_time_param_overrides, new_globs, filename
-        )
+        assert rtp_params is not None
+        context._params = rtp_params
 
     try:
         _runfunc_ok(new_globs.get("run"))

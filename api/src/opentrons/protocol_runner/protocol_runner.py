@@ -1,15 +1,16 @@
 """Protocol run control and management."""
 import asyncio
-from typing import List, NamedTuple, Optional, Union
+import inspect
+from typing import List, NamedTuple, Optional, Union, Dict, Any
 
 from abc import ABC, abstractmethod
 
 import anyio
 
 from opentrons.hardware_control import HardwareControlAPI
-from opentrons import protocol_reader
+from opentrons import protocol_reader, APIVersion
 from opentrons.legacy_broker import LegacyBroker
-from opentrons.protocol_api import ParameterContext
+from opentrons.protocol_api import ParameterContext, Parameters
 from opentrons.protocol_reader import (
     ProtocolSource,
     JsonProtocolConfig,
@@ -43,6 +44,8 @@ from ..protocol_engine.types import (
     RunTimeParameter,
     RunTimeParamValuesType,
 )
+from ..protocols.execution.execute_python import _raise_pretty_protocol_error
+from ..protocols.types import Protocol, MalformedPythonProtocolError
 
 
 class RunResult(NamedTuple):
@@ -168,6 +171,63 @@ class PythonAndLegacyRunner(AbstractRunner):
             return self._parameter_context.export_parameters_for_analysis()
         return []
 
+    @staticmethod
+    def _add_parameters_func_ok(add_parameters_func: Any) -> None:
+        if not callable(add_parameters_func):
+            raise SyntaxError("'add_parameters' must be a function.")
+        sig = inspect.Signature.from_callable(add_parameters_func)
+        if len(sig.parameters) != 1:
+            raise SyntaxError(
+                "Function 'add_parameters' must take exactly one argument."
+            )
+
+    def _parse_and_set_parameters(
+        self,
+        run_time_param_overrides: Optional[RunTimeParamValuesType],
+        new_globs: Dict[Any, Any],
+        filename: str,
+    ) -> Parameters:
+        assert self._parameter_context is not None
+        try:
+            self._add_parameters_func_ok(new_globs.get("add_parameters"))
+        except SyntaxError as se:
+            raise MalformedPythonProtocolError(str(se))
+        new_globs["__param_context"] = self._parameter_context
+        try:
+            exec("add_parameters(__param_context)", new_globs)
+            if run_time_param_overrides is not None:
+                self._parameter_context.set_parameters(run_time_param_overrides)
+        except Exception as e:
+            _raise_pretty_protocol_error(exception=e, filename=filename)
+        return self._parameter_context.export_parameters_for_protocol()
+
+    def _get_final_run_time_parameters(
+        self,
+        protocol: Protocol,
+        run_time_param_values: Optional[RunTimeParamValuesType],
+    ) -> Optional[Parameters]:
+        self._parameter_context = ParameterContext(api_version=protocol.api_level)
+        new_globs: Dict[Any, Any] = {}
+        exec(protocol.contents, new_globs)
+
+        if protocol.filename and protocol.filename.endswith("zip"):
+            # The ".zip" extension needs to match what opentrons.protocols.parse recognizes as a bundle,
+            # and the "protocol.ot2.py" fallback needs to match what opentrons.protocol.py sets as the
+            # AST filename.
+            filename = "protocol.ot2.py"
+        else:
+            # "<protocol>" needs to match what opentrons.protocols.parse sets as the fallback
+            # AST filename.
+            filename = protocol.filename or "<protocol>"
+
+        if new_globs.get("add_parameters"):
+            return self._parse_and_set_parameters(
+                run_time_param_overrides=run_time_param_values,
+                new_globs=new_globs,
+                filename=filename,
+            )
+        return None
+
     async def load(
         self,
         protocol_source: ProtocolSource,
@@ -188,7 +248,10 @@ class PythonAndLegacyRunner(AbstractRunner):
         protocol = self._legacy_file_reader.read(
             protocol_source, labware_definitions, python_parse_mode
         )
-        self._parameter_context = ParameterContext(api_version=protocol.api_level)
+        final_params = self._get_final_run_time_parameters(
+            protocol=protocol, run_time_param_values=run_time_param_values
+        )
+
         equipment_broker = None
 
         if protocol.api_level < LEGACY_PYTHON_API_VERSION_CUTOFF:
@@ -219,8 +282,9 @@ class PythonAndLegacyRunner(AbstractRunner):
             await self._legacy_executor.execute(
                 protocol=protocol,
                 context=context,
-                parameter_context=self._parameter_context,
-                run_time_param_values=run_time_param_values,
+                parameter_context=None,
+                run_time_param_values=None,
+                rtp_params=final_params,
             )
 
         self._task_queue.set_run_func(run_func)
