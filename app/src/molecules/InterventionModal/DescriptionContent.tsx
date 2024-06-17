@@ -1,0 +1,66 @@
+import * as React from 'react'
+import {
+  Flex,
+  SPACING,
+  DIRECTION_COLUMN,
+  StyledText,
+  RESPONSIVENESS,
+} from '@opentrons/components'
+import { InlineNotification } from '../../atoms/InlineNotification'
+
+interface NotificationProps {
+  notificationHeader?: string
+  notificationMessage?: string
+}
+
+export interface DescriptionContentProps extends NotificationProps {
+  headline: string
+  message: string
+}
+
+export function DescriptionContent(
+  props: DescriptionContentProps
+): JSX.Element {
+  return (
+    <Flex
+      flexDirection={DIRECTION_COLUMN}
+      gap={SPACING.spacing24}
+      css={`
+        gap: ${SPACING.spacing16} @media:
+          ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
+          gap: ${SPACING.spacing24};
+        }
+      `}
+    >
+      <Flex
+        flexDirection={DIRECTION_COLUMN}
+        css={`
+          gap: ${SPACING.spacing16};
+          @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
+            gap: ${SPACING.spacing8};
+          }
+        `}
+      >
+        <StyledText as="h4SemiBold">{props.headline}</StyledText>
+        <StyledText as="p">{props.message}</StyledText>
+      </Flex>
+      <NotificationIfSpecified {...props} />
+    </Flex>
+  )
+}
+
+function NotificationIfSpecified({
+  notificationHeader,
+  notificationMessage,
+}: NotificationProps): JSX.Element | null {
+  const shouldHide = (): boolean =>
+    (notificationHeader == null || notificationHeader.length === 0) &&
+    (notificationMessage == null || notificationMessage.length === 0)
+  return shouldHide() ? null : (
+    <InlineNotification
+      type="alert"
+      heading={notificationHeader}
+      message={notificationMessage}
+    />
+  )
+}
