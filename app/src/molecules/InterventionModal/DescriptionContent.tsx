@@ -53,13 +53,11 @@ function NotificationIfSpecified({
   notificationHeader,
   notificationMessage,
 }: NotificationProps): JSX.Element | null {
-  const shouldHide = (): boolean =>
-    (notificationHeader == null || notificationHeader.length === 0) &&
-    (notificationMessage == null || notificationMessage.length === 0)
-  return shouldHide() ? null : (
+  return (notificationHeader == null || notificationHeader.length === 0) &&
+    (notificationMessage == null || notificationMessage.length === 0) ? null : (
     <InlineNotification
       type="alert"
-      heading={notificationHeader}
+      heading={notificationHeader as string}
       message={notificationMessage}
     />
   )
