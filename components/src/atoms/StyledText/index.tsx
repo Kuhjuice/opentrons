@@ -60,7 +60,7 @@ export const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
     }
   `,
   h4SemiBold: css`
-    ${TYPOGRAPHY.h3SemiBold}
+    ${TYPOGRAPHY.h4SemiBold}
     @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
       ${TYPOGRAPHY.level4HeaderSemiBold}
     }
