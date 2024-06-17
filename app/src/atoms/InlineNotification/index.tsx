@@ -81,11 +81,7 @@ export function InlineNotification(
     >
       <Icon {...iconProps} aria-label={`icon_${type}`} />
       <Flex flex="1" alignItems={ALIGN_CENTER}>
-        <StyledText
-          fontSize={TYPOGRAPHY.fontSize22}
-          fontWeight={TYPOGRAPHY.fontWeightRegular}
-          lineHeight={TYPOGRAPHY.lineHeight28}
-        >
+        <StyledText as="p">
           <span
             css={`
               font-weight: ${TYPOGRAPHY.fontWeightSemiBold};
