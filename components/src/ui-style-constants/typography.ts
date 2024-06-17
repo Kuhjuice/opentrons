@@ -84,6 +84,30 @@ export const h3SemiBold = css`
   line-height: ${lineHeight20};
 `
 
+export const h3Bold = css`
+  font-size: ${fontSizeH3};
+  font-weight: ${fontWeightBold};
+  line-height: ${lineHeight20};
+`
+
+export const h4Regular = css`
+  font-size: ${fontSizeH4};
+  font-weight: ${fontWeightRegular};
+  line-height: ${lineHeight20};
+`
+
+export const h4SemiBold = css`
+  font-size: ${fontSizeH4};
+  font-weight: ${fontWeightSemiBold};
+  line-height: ${lineHeight20};
+`
+
+export const h4Bold = css`
+  font-size: ${fontSizeH4};
+  font-weight: ${fontWeightBold};
+  line-height: ${lineHeight20};
+`
+
 export const h6Default = css`
   font-size: ${fontSizeH6};
   font-weight: ${fontWeightRegular};

@@ -2,7 +2,7 @@
 import * as React from 'react'
 import { SPACING, TYPOGRAPHY } from '../../ui-style-constants'
 import { Flex } from '../../primitives'
-import { StyledText } from './index'
+import { StyledText, styleMap } from './index'
 import type { Meta, StoryObj } from '@storybook/react'
 
 const meta: Meta<typeof StyledText> = {
@@ -15,6 +15,15 @@ const meta: Meta<typeof StyledText> = {
       </Flex>
     ),
   ],
+  argTypes: {
+    as: {
+      control: {
+        type: 'select',
+      },
+      options: Object.keys(styleMap),
+      defaultType: 'h1',
+    },
+  },
 }
 
 export default meta

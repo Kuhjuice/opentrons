@@ -9,7 +9,7 @@ export interface Props extends React.ComponentProps<typeof Text> {
   children?: React.ReactNode
 }
 
-const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
+export const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
   h1: css`
     ${TYPOGRAPHY.h1Default};
     @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
@@ -29,6 +29,7 @@ const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
     }
   `,
   h4: css`
+    ${TYPOGRAPHY.h4Regular}
     @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
       ${TYPOGRAPHY.level4HeaderRegular};
     }
@@ -58,7 +59,12 @@ const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
       ${TYPOGRAPHY.level3HeaderSemiBold}
     }
   `,
-  h4SemiBold: TYPOGRAPHY.level4HeaderSemiBold,
+  h4SemiBold: css`
+    ${TYPOGRAPHY.h3SemiBold}
+    @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
+      ${TYPOGRAPHY.level4HeaderSemiBold}
+    }
+  `,
   h6SemiBold: TYPOGRAPHY.h6SemiBold,
   pSemiBold: css`
     ${TYPOGRAPHY.pSemiBold}
@@ -74,8 +80,18 @@ const styleMap: { [tag: string]: FlattenSimpleInterpolation } = {
     }
   `,
   h2Bold: TYPOGRAPHY.level2HeaderBold,
-  h3Bold: TYPOGRAPHY.level3HeaderBold,
-  h4Bold: TYPOGRAPHY.level4HeaderBold,
+  h3Bold: css`
+    ${TYPOGRAPHY.h3Bold}
+    @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
+      ${TYPOGRAPHY.level3HeaderBold}
+    }
+  `,
+  h4Bold: css`
+    ${TYPOGRAPHY.h4Bold}
+    @media ${RESPONSIVENESS.touchscreenMediaQuerySpecs} {
+      ${TYPOGRAPHY.level4HeaderBold}
+    }
+  `,
   pBold: TYPOGRAPHY.bodyTextBold,
   labelBold: TYPOGRAPHY.smallBodyTextBold,
 }
